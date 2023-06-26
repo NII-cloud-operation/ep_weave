@@ -17,13 +17,13 @@ function removeMd(baseText) {
 }
 
 function extractTitle(padData) {
-    const lines = (padData.atext || {}).text.split('\n');
-    return removeMd(lines[0]);
+  const lines = (padData.atext || {}).text.split('\n');
+  return removeMd(lines[0]);
 }
 
 function extractCreated(pad) {
   const revs = (pad.savedRevisions || [])
-    .map((rev) => rev.timestamp);
+      .map((rev) => rev.timestamp);
   revs.sort();
   if (revs.length === 0) {
     return null;
@@ -40,24 +40,22 @@ function extractShortText(text) {
   return atext.length > LENGTH_SHORT_TEXT ? `${atext.substring(0, LENGTH_SHORT_TEXT)}...` : atext;
 }
 
-exports.create = (pluginSettings) => {
-  return (pad) => {
-    const atext = (pad.atext || {}).text || '';
-    const shorttext = extractShortText(atext);
-    const result = {
-      indexed: new Date().toISOString(),
-      id: pad.id,
-      _text_: atext,
-      atext,
-      title: extractTitle(pad),
-      hash: atext,
-      shorttext,
-    };
-    const created = extractCreated(pad);
-    if (created !== null) {
-      result.created = created;
-    }
-    console.debug(logPrefix, 'serialize', pad, result);
-    return result;
+exports.create = (pluginSettings) => (pad) => {
+  const atext = (pad.atext || {}).text || '';
+  const shorttext = extractShortText(atext);
+  const result = {
+    indexed: new Date().toISOString(),
+    id: pad.id,
+    _text_: atext,
+    atext,
+    title: extractTitle(pad),
+    hash: atext,
+    shorttext,
   };
-}
+  const created = extractCreated(pad);
+  if (created !== null) {
+    result.created = created;
+  }
+  console.debug(logPrefix, 'serialize', pad, result);
+  return result;
+};
