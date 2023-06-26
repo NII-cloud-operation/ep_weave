@@ -1,3 +1,15 @@
+.hashview-change-title {
+    background-color: #64d29b;
+    color: #fff;
+    display: none;
+}
+
+.hashview-title-duplicated {
+    background-color: #f00;
+    color: #fff;
+    display: none;
+}
+
 .hashview {
     background-color: white;
     position: absolute;
@@ -6,6 +18,19 @@
     bottom: 0;
     border-top: 1px solid #ccc;
     padding: 0.5em;
+}
+
+#hashview {
+    max-height: 50vh;
+    overflow-y: auto;
+}
+
+.hashview-toolbar {
+    display: flex;
+}
+
+.hashview-sort {
+    margin-left: auto;
 }
 
 .hashview-collapsed {
@@ -21,13 +46,15 @@
 }
 
 .hashview-close {
-    position: absolute;
-    right: 12px;
-    top: 12px;
+    margin: 7px;
 }
 
 .hash-container {
+    font-size: 0.9em;
     display: flex;
+    flex-wrap: wrap;
+    margin-bottom: 1em;
+    margin-left: 1em;
 }
 
 .hash-text {
@@ -38,4 +65,23 @@
     border: 1px solid #eee;
     margin: 1em;
     padding: 1em;
+    width: 147px;
+    height: 128px;
+    word-wrap: break-word;
+}
+
+.hash-title {
+    font-weight: bold;
+}
+
+.hash-shorttext {
+    color: #555;
+}
+
+.hash-create {
+    background-color: #f8f8f8;
+}
+
+.hash-create .hash-title {
+    color: #888;
 }

@@ -230,7 +230,7 @@
     /*
      * The default text of a pad
      */
-    "defaultPadText" : "新しいページ\n",
+    "defaultPadText" : "新しいep_weaveページ\n\nこのEtherpadは https://github.com/NII-cloud-operation/ep_weave の定義に基づいて生成されました。\nこの環境では、 #ハッシュタグ を用いて別のページへの参照を定義し、ページ同士を容易にリンクすることができます。また、テキストの1行目がタイトルとして扱われます。\nこの機構は https://scrapbox.io/ にインスパイアされて実装したものです。\n\n(このテキストは demo/settings.jsonの defaultPadText で変更可能です。)\n",
   
     /*
      * Default Pad behavior.

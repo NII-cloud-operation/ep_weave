@@ -15,6 +15,7 @@ services:
       POSTGRES_PASSWORD: etherpadpass
     volumes:
       - postgres_data_vol:/var/lib/postgresql/data/
+    restart: always
 
   solr:
     build:
@@ -22,6 +23,7 @@ services:
       dockerfile: solr/Dockerfile
     volumes:
       - solr_data_vol:/var/solr/
+    restart: always
 
   etherpad:
     build:
@@ -42,3 +44,4 @@ services:
     depends_on:
       - postgresql
       - solr
+    restart: always
