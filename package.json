@@ -1,6 +1,6 @@
 {
   "name": "ep_weave",
-  "description": "Link all pads using Hash inspired by Scrapbox and ep_search",
+  "description": "Link all pads using Hash inspired by Squeak Swiki and Scrapbox",
   "version": "0.1.0",
   "author": {
     "name": "NII-cloud-operation",
