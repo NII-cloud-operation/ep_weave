@@ -8,7 +8,7 @@ volumes:
 
 services:
   postgresql:
-    image: postgres:9.6
+    image: postgres:15
     environment:
       POSTGRES_DB: etherpad
       POSTGRES_USER: etherpaduser
