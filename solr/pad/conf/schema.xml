@@ -38,7 +38,7 @@
   <field name="created" type="date" multiValued="false" indexed="true" required="false" stored="true"/>
   <field name="_text_" type="text_ja" multiValued="false" indexed="true" required="true" stored="false"/>
   <field name="atext" type="text_ja" multiValued="false" indexed="true" required="true" stored="false"/>
-  <!-- Scrapbox-like Etherpad Support -->
+  <!-- Squeak Swiki and Scrapbox-like Etherpad Support -->
   <field name="title" type="string" multiValued="false" indexed="true" required="true" stored="true"/>
   <field name="hash" type="hash" multiValued="false" indexed="true" required="true" stored="false"/>
   <field name="shorttext" type="text_ja" multiValued="false" indexed="false" required="true" stored="true"/>
