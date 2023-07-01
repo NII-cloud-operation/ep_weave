@@ -100,6 +100,22 @@ async function updateHashes(searchEngine, oldtitle, newtitle) {
   };
 }
 
+exports.preAuthorize = (hookNmae, args, cb) => {
+  const { req } = args;
+  const m = req.originalUrl.match(/^\/ep_weave(\/.+)/);
+  if (!m) {
+    cb();
+    return;
+  }
+  const path = m[1];
+  if (path.match(/^\/api\/.+/)) {
+    console.debug(logPrefix, 'preAuthorize: Grant access for API', req.originalUrl);
+    cb(true);
+    return;
+  }
+  cb();
+};
+
 exports.registerRoute = (hookName, args, cb) => {
   const pluginSettings = settings.ep_search || {};
   const searchEngine = createSearchEngine(pluginSettings);
@@ -134,7 +150,7 @@ exports.registerRoute = (hookName, args, cb) => {
         });
   };
   const {app} = args;
-  app.get('/api/ep_weave/search', apikeyChecker, searchHandler);
+  app.get('/ep_weave/api/search', apikeyChecker, searchHandler);
   app.get('/t/:title', (req, res) => {
     const {title} = req.params;
     getPadIdsByTitle(searchEngine, title)
