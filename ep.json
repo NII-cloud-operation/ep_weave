@@ -4,6 +4,7 @@
       "name": "ep_weave",
       "hooks": {
         "expressCreateServer" : "ep_weave/index:registerRoute",
+        "preAuthorize": "ep_weave/index",
         "eejsBlock_styles": "ep_weave/client"
       },
       "client_hooks": {
