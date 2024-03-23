@@ -1,0 +1,13 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "module": "commonjs",                                /* Specify what module code is generated. */
+        "outDir": "./lib/",                                   /* Specify an output folder for all emitted files. */
+    },
+    "include": [
+        "src/pad/*.ts",
+        "src/pad/**/*.ts",
+        "src/common/*.ts",
+        "src/common/**/*.ts"
+    ]
+}

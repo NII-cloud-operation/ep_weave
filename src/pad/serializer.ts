@@ -1,13 +1,12 @@
-'use strict';
-
-const removeMdBase = require('remove-markdown');
+import { PadType } from "ep_search/setup";
+import removeMdBase from "remove-markdown";
 
 
 const logPrefix = '[ep_weave]';
 const LENGTH_SHORT_TEXT = 32;
 
 
-function removeMd(baseText) {
+function removeMd(baseText: string) {
   const text = removeMdBase(baseText);
   const m = text.match(/^\*+(.+)$/);
   if (m) {
@@ -16,12 +15,12 @@ function removeMd(baseText) {
   return text;
 }
 
-function extractTitle(padData) {
+function extractTitle(padData: PadType) {
   const lines = (padData.atext || {}).text.split('\n');
   return removeMd(lines[0]);
 }
 
-function extractCreated(pad) {
+function extractCreated(pad: PadType) {
   const revs = (pad.savedRevisions || [])
       .map((rev) => rev.timestamp);
   revs.sort();
@@ -31,7 +30,7 @@ function extractCreated(pad) {
   return new Date(revs[0]).toISOString();
 }
 
-function extractShortText(text) {
+function extractShortText(text: string) {
   const titleIndex = text.indexOf('\n');
   let atext = text;
   if (titleIndex >= 0) {
@@ -40,10 +39,19 @@ function extractShortText(text) {
   return atext.length > LENGTH_SHORT_TEXT ? `${atext.substring(0, LENGTH_SHORT_TEXT)}...` : atext;
 }
 
-exports.create = (pluginSettings) => (pad) => {
+exports.create = (pluginSettings: any) => (pad: PadType) => {
   const atext = (pad.atext || {}).text || '';
   const shorttext = extractShortText(atext);
-  const result = {
+  const result: {
+    indexed: string;
+    id: string;
+    _text_: string;
+    atext: string;
+    title: string;
+    hash: string;
+    shorttext: string;
+    created?: string;
+  } = {
     indexed: new Date().toISOString(),
     id: pad.id,
     _text_: atext,

@@ -1,11 +1,15 @@
+FROM mcr.microsoft.com/devcontainers/typescript-node:18 AS build-stage
+
+COPY . /app/ep_weave
+RUN cd /app/ep_weave \
+    && ls -la /app/ep_weave \
+    && npm i --include dev && npm run build
+
 FROM etherpad/etherpad:2
 
 USER root
 
-COPY . /tmp/ep_weave
-RUN cd /tmp/ep_weave \
-    && ls -la /tmp/ep_weave \
-    && npm pack
+COPY --from=build-stage /app/ep_weave /tmp/ep_weave
 
 # ep_search
 RUN git clone -b feature/search-engine-ep2 https://github.com/yacchin1205/ep_search.git /tmp/ep_search \
@@ -24,3 +28,4 @@ RUN bin/installDeps.sh && rm -rf ~/.npm && \
     if [ ! -z "${ETHERPAD_LOCAL_PLUGINS}" ]; then \
         pnpm run install-plugins ${ETHERPAD_LOCAL_PLUGINS:+--path ${ETHERPAD_LOCAL_PLUGINS}}; \
     fi
+COPY --chown=etherpad demo/installed_plugins.json /opt/etherpad-lite/var/

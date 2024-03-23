@@ -657,6 +657,6 @@
     "host": "solr",
     "port": "8983",
     "core": "pad",
-    "padSerializer": "ep_weave/serializer"
+    "padSerializer": "ep_weave/lib/serializer"
   }
 }

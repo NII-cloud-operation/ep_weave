@@ -7,3 +7,6 @@ demo/APIKEY.txt
 
 .DS_Store
 ep_weave-*.tgz
+lib/
+static/js/
+static/css/

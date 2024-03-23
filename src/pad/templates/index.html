@@ -1,0 +1,37 @@
+<link rel="stylesheet" href="../static/plugins/ep_weave/static/css/index.css" type="text/css" />
+
+<div id="weaveIndex">Weave Index</div>
+
+<script type="text/javascript">
+    $(document).ready(function(){
+        const { weaveIndex } = window;
+        weaveIndex.init();
+    });
+    /*
+$('#searchForm')
+  .keyup(function(){
+    $("#searchResults").html("");
+    doSearch();
+  })
+  .submit(function(event){
+    event.preventDefault();
+    $("#searchResults").html("");
+    doSearch();
+  });
+
+function doSearch(){
+  var searchString = $("#searchInput").val();
+  $("#searchResults").html("");
+  $.getJSON('/search/?query='+encodeURI(searchString), function(data) {
+    // console.log(data);
+    $.each(data, function(index, doc){
+      var value = doc.id;
+      // console.log(value);
+      value = value.replace("pad:", "");
+      value = encodeURI(value);
+      $("#searchResults").append("<div><a href='/p/"+value+"'>"+value+"</a></div>");
+    });
+  });
+}
+*/
+</script>

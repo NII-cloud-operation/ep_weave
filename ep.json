@@ -3,9 +3,11 @@
     {
       "name": "ep_weave",
       "hooks": {
-        "expressCreateServer" : "ep_weave/index:registerRoute",
-        "preAuthorize": "ep_weave/index",
-        "eejsBlock_styles": "ep_weave/client"
+        "expressCreateServer" : "ep_weave/lib/index:registerRoute",
+        "preAuthorize": "ep_weave/lib/index",
+        "eejsBlock_styles": "ep_weave/lib/client",
+        "eejsBlock_indexWrapper": "ep_weave/lib/client",
+        "eejsBlock_indexCustomScripts": "ep_weave/lib/client"
       },
       "client_hooks": {
         "postAceInit": "ep_weave/static/js/hashview",
