@@ -1,3 +1,46 @@
 #inner {
     display: none;
 }
+
+label[for="searchInput"] {
+    display: none;
+}
+
+#searchForm {
+    display: none;
+}
+
+#searchResults {
+    display: none;
+}
+
+.weave-container {
+    display: flex;
+    flex-wrap: wrap;
+    max-width: 90vw;
+    font-size: 13.5px;
+    justify-content: center;
+}
+
+.weave-more-container {
+    width: 100%;
+}
+
+.weave-error {
+    display: none;
+    color: red;
+}
+
+.weave-error-title {
+    color: red;
+    font-weight: bold;
+}
+
+.hashview-search {
+    display: flex;
+    min-width: 50%;
+}
+
+.hashview-search-box {
+    flex-grow: 1;
+}

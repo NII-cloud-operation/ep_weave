@@ -29,6 +29,15 @@
     display: flex;
 }
 
+.hashview-search {
+    display: flex;
+    min-width: 50%;
+}
+
+.hashview-search-box {
+    flex-grow: 1;
+}
+
 .hashview-sort {
     margin-left: auto;
 }
@@ -68,14 +77,24 @@
     width: 147px;
     height: 128px;
     word-wrap: break-word;
+    background-color: white;
+    box-shadow: 0 0 5px #999;
 }
 
 .hash-title {
     font-weight: bold;
 }
 
+.hash-title a {
+    display: block;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
 .hash-shorttext {
     color: #555;
+    text-overflow: ellipsis;
+    overflow: hidden;
 }
 
 .hash-create {

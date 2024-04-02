@@ -24,7 +24,8 @@ async function getPadIdsByTitle(searchEngine: SearchEngine, title: string) {
   if (!results) {
     return null;
   }
-  const ids = results
+  const { docs } = results;
+  const ids = docs
     .filter((result) => result.title === title)
     .map((result) => result.id);
   if (ids.length === 0) {
@@ -116,7 +117,8 @@ async function updateHashes(
   oldtitle: string,
   newtitle: string
 ) {
-  const pads = await searchEngine.search(`hash:"#${oldtitle}"`);
+  const results = await searchEngine.search(`hash:"#${oldtitle}"`);
+  const { docs: pads } = results;
   const updates = await Promise.all(
     pads.map((pad) => updateHash(pad, oldtitle, newtitle))
   );

@@ -1,37 +1,27 @@
 <link rel="stylesheet" href="../static/plugins/ep_weave/static/css/index.css" type="text/css" />
+<link rel="stylesheet" href="../static/plugins/ep_weave/static/css/styles.css" type="text/css" />
 
-<div id="weaveIndex">Weave Index</div>
+<div id="weave-index">
+  <div class="weave-toolbar">
+  </div>
+  <div class="weave-container">
+  </div>
+</div>
+
+<div class="weave-error">
+    <div class="weave-error-title">Error</div>
+    <div class="weave-error-message"></div>
+    <i class="fa fa-close weave-error-close"></i>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js">
+</script>
 
 <script type="text/javascript">
-    $(document).ready(function(){
-        const { weaveIndex } = window;
-        weaveIndex.init();
-    });
-    /*
-$('#searchForm')
-  .keyup(function(){
-    $("#searchResults").html("");
-    doSearch();
-  })
-  .submit(function(event){
-    event.preventDefault();
-    $("#searchResults").html("");
-    doSearch();
-  });
-
-function doSearch(){
-  var searchString = $("#searchInput").val();
-  $("#searchResults").html("");
-  $.getJSON('/search/?query='+encodeURI(searchString), function(data) {
-    // console.log(data);
-    $.each(data, function(index, doc){
-      var value = doc.id;
-      // console.log(value);
-      value = value.replace("pad:", "");
-      value = encodeURI(value);
-      $("#searchResults").append("<div><a href='/p/"+value+"'>"+value+"</a></div>");
+  $(document).ready(function(){
+    require(['index/index'], function(index) {
+      console.log("index loaded", index);
+      index.default();
     });
   });
-}
-*/
 </script>

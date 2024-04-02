@@ -6,9 +6,10 @@ import {
   PostAceInitContext,
   PostToolbarInit,
 } from "ep_etherpad-lite/hooks";
+import { createHashItemView } from "./hashitem";
 import { parse } from "./parser";
-import { PadType } from "ep_search/setup";
 import { query } from "./result";
+import { createToolbar } from "./toolbar";
 
 type PadRef = {
   id: string;
@@ -16,6 +17,7 @@ type PadRef = {
 
 const logPrefix = "[ep_weave/hashview]";
 let currentHashes: string[] = [];
+let currentSearchBox: string | null = null;
 let myPad: PadRef | null = null;
 let duplicatedPads: PadRef[] | null = null;
 let changedTitle: { oldtitle: string; newtitle: string } | null = null;
@@ -23,6 +25,7 @@ const ACE_EDITOR_TAG = "searchHash";
 const ACE_EDITOR_MODIFIER_PATTERN = /(^| )searchHash:(\S+)/g;
 const ACE_EDITOR_CLASS = "hashview-editor-link";
 const MAX_OPEN_DUPLICATED_PADS = 3;
+const LIMIT_HASH_VIEW_ITEMS = 50;
 
 function updateTitle(title: string) {
   document.title = `${title} | Etherpad`;
@@ -71,10 +74,15 @@ function overrideEmbedCommand(toolbar: AceToolbar) {
   });
 }
 
+function getCurrentSort() {
+  const sort = $("#hashview-order").val();
+  return typeof sort === "string" ? sort : null;
+}
+
 function createMenuItem() {
   const changeTitleButton = $("<button></button>")
     .addClass("hashview-change-title btn")
-    .click(() => {
+    .on("click", () => {
       if (!changedTitle) {
         return;
       }
@@ -102,13 +110,18 @@ function createMenuItem() {
           if (!currentHashes) {
             return;
           }
-          reloadHashView(ep_weave.title, currentHashes);
+          reloadHashView(
+            ep_weave.title,
+            currentHashes,
+            currentSearchBox,
+            getCurrentSort()
+          );
         },
       });
     });
   const titleDuplicatedLabel = $("<button></button>")
     .addClass("hashview-title-duplicated btn")
-    .click(() => {
+    .on("click", () => {
       if (!duplicatedPads) {
         return;
       }
@@ -128,20 +141,24 @@ function checkTitleChanged(title: string) {
   if (ep_weave.titleChangedChecked === title) {
     return;
   }
-  const qhash = `hash:"#${ep_weave.oldTitle}"`;
-  $.getJSON(`/search/?query=${encodeURIComponent(qhash)}`, (data) => {
-    if (!data || data.length === 0) {
-      console.debug(logPrefix, "Not referred", data);
-      return;
-    }
-    console.debug(logPrefix, "Referred", data.length);
-    changedTitle = {
-      oldtitle: ep_weave.oldTitle,
-      newtitle: title,
-    };
-    $(".hashview-change-title").text(`Title changed: ${title}`).show();
-    ep_weave.titleChangedChecked = title;
-  });
+  query(`hash:"#${ep_weave.oldTitle}"`)
+    .then((response) => {
+      const data = response.docs;
+      if (!data || data.length === 0) {
+        console.debug(logPrefix, "Not referred", data);
+        return;
+      }
+      console.debug(logPrefix, "Referred", data.length);
+      changedTitle = {
+        oldtitle: ep_weave.oldTitle,
+        newtitle: title,
+      };
+      $(".hashview-change-title").text(`Title changed: ${title}`).show();
+      ep_weave.titleChangedChecked = title;
+    })
+    .catch((err) => {
+      console.error(logPrefix, "Error", err);
+    });
 }
 
 function checkTitleDuplicated(title: string, customClientVars?: ClientVars) {
@@ -149,12 +166,10 @@ function checkTitleDuplicated(title: string, customClientVars?: ClientVars) {
   if (ep_weave.titleDuplicatedChecked === title) {
     return;
   }
-  const qhashNew = `title:${title}`;
-  $.getJSON(
-    `/search/?query=${encodeURIComponent(qhashNew)}`,
-    (data: PadType[]) => {
+  query(`title:${title}`)
+    .then((data) => {
       ep_weave.titleDuplicatedChecked = title;
-      const filtered = (data || []).filter(
+      const filtered = (data.docs || []).filter(
         (elem) => elem.id !== myPad?.id && elem.title === title
       );
       if (filtered.length === 0) {
@@ -175,8 +190,10 @@ function checkTitleDuplicated(title: string, customClientVars?: ClientVars) {
         .slice(0, MAX_OPEN_DUPLICATED_PADS);
       $(".hashview-title-duplicated").text(`Title duplicated: ${title}`).show();
       $(".hashview-change-title").hide();
-    }
-  );
+    })
+    .catch((err) => {
+      console.error(logPrefix, "Error", err);
+    });
 }
 
 function checkTitle(title: string) {
@@ -192,50 +209,53 @@ function checkTitle(title: string) {
 async function loadHashView(
   title: string,
   hash: string,
+  additionalQuery: string | null,
+  limit: number,
   sort: string | undefined,
   container: JQuery
 ) {
-  const dataForHash: PadType[] = await query(`hash:"${hash}"`, sort);
+  const additionalLuceneQuery = additionalQuery
+    ? ` AND ${additionalQuery}`
+    : "";
+  const dataForHash = await query(
+    `hash:"${hash}"${additionalLuceneQuery}`,
+    0,
+    limit,
+    sort
+  );
   let empty = true;
-  (dataForHash || [])
+  (dataForHash.docs || [])
     .filter((doc) => doc.id !== clientVars.padId)
     .forEach((doc) => {
-      let value = doc.id;
-      value = value.replace("pad:", "");
-      value = encodeURIComponent(value);
-      const title = doc.title || value;
-      const anchor = $("<a></a>").attr("href", `/p/${value}`).text(title);
-      const hashLink = $("<div></div>")
-        .append($("<div></div>").addClass("hash-title").append(anchor))
-        .addClass("hash-link");
-      if (doc.shorttext) {
-        hashLink.append(
-          $("<div></div>").addClass("hash-shorttext").append(doc.shorttext)
-        );
-      }
-      container.append(hashLink);
+      container.append(createHashItemView(doc));
       empty = false;
     });
   if (
-    (dataForHash || []).every((doc) => doc.title !== hash.substring(1)) &&
+    (dataForHash.docs || []).every((doc) => doc.title !== hash.substring(1)) &&
     title !== hash.substring(1)
   ) {
-    const dataForTitle: PadType[] = await query(
-      `title:${hash.substring(1)}`,
+    const dataForTitle = await query(
+      `title:${hash.substring(1)}${additionalLuceneQuery}`,
+      0,
+      limit,
       sort
     );
     const anchor = $("<a></a>")
       .attr("href", `/t/${hash.substring(1)}`)
       .text(hash.substring(1));
-    const createClass = (dataForTitle || []).length === 0 ? "hash-create" : "";
+    const createClass =
+      (dataForTitle.docs || []).length === 0 ? "hash-create" : "";
     const hashLink = $("<div></div>")
       .append($("<div></div>").addClass("hash-title").append(anchor))
       .addClass(`hash-link ${createClass}`);
-    if ((dataForTitle || []).length > 0 && dataForTitle[0].shorttext) {
+    if (
+      (dataForTitle.docs || []).length > 0 &&
+      dataForTitle.docs[0].shorttext
+    ) {
       hashLink.append(
         $("<div></div>")
           .addClass("hash-shorttext")
-          .append(dataForTitle[0].shorttext)
+          .append(dataForTitle.docs[0].shorttext)
       );
     }
     container.append(hashLink);
@@ -247,22 +267,27 @@ async function loadHashView(
   return !empty;
 }
 
-function reloadHashView(title: string, hashes: string[]) {
+function reloadHashView(
+  title: string,
+  hashes: string[],
+  additionalQuery: string | null,
+  sort: string | null
+) {
   const root = $("#hashview").empty();
   const tasks = (hashes || []).map((hash) => {
     root.append($("<div></div>").text(hash).addClass("hash-text"));
     const container = $("<div></div>").addClass("hash-container");
     root.append(container);
-    const sort = $("#hashview-order").val();
     return loadHashView(
       title,
       hash,
-      sort !== undefined ? sort.toString() : undefined,
+      additionalQuery,
+      LIMIT_HASH_VIEW_ITEMS,
+      sort !== null ? sort.toString() : undefined,
       container
     );
   });
-  Promise.all(tasks).then(() => {
-  });
+  Promise.all(tasks).then(() => {});
 }
 
 exports.postAceInit = (hook: any, context: PostAceInitContext) => {
@@ -312,63 +337,48 @@ exports.aceEditEvent = (hook: string, context: AceEditEventContext) => {
   }
   currentHashes = hashes;
   console.debug(logPrefix, "EDITED", hashes);
-  reloadHashView(title, hashes);
+  reloadHashView(title, hashes, currentSearchBox, getCurrentSort());
 };
 
 exports.postToolbarInit = (hook: any, context: PostToolbarInit) => {
   const $editorcontainerbox = $("#editorcontainerbox");
   const result = $("<div>").attr("id", "hashview");
-  const close = $("<div>")
-    .addClass("hashview-close")
-    .append($("<i>").addClass("buttonicon buttonicon-times"))
-    .click((event) => {
-      event.stopPropagation();
-      const collapsed = $(".hashview-collapsed");
-      if (collapsed.length === 0) {
-        $(".hashview")
-          .addClass("hashview-collapsed")
-          .removeClass("hashview-expanded");
-      }
-    });
-  const sortSelection = $("<select></select>")
-    .attr("id", "hashview-order")
-    .append(
-      $("<optgroup></optgroup>")
-        .attr("label", "Sort by")
-        .append(
-          $("<option></option>")
-            .attr("value", "indexed desc")
-            .attr("selected", "selected")
-            .text("Date modified")
-        )
-        .append(
-          $("<option></option>")
-            .attr("value", "created desc")
-            .text("Date created")
-        )
-        .append($("<option></option>").attr("value", "title asc").text("Title"))
-    );
-  const sort = $("<div>")
-    .addClass("hashview-sort")
-    .append(
-      sortSelection.on("change", () => {
-        if (!clientVars) {
-          return;
-        }
-        const { ep_weave } = clientVars;
-        if (!currentHashes) {
-          return;
-        }
-        reloadHashView(ep_weave.title, currentHashes);
-      })
-    );
   $("<div>")
     .addClass("hashview hashview-expanded")
     .append(
-      $("<div></div>").addClass("hashview-toolbar").append(sort).append(close)
+      createToolbar({
+        onSort: (sort: string) => {
+          if (!clientVars) {
+            return;
+          }
+          const { ep_weave } = clientVars;
+          if (!currentHashes) {
+            return;
+          }
+          reloadHashView(ep_weave.title, currentHashes, currentSearchBox, sort);
+        },
+        onClose: () => {
+          const collapsed = $(".hashview-collapsed");
+          if (collapsed.length === 0) {
+            $(".hashview")
+              .addClass("hashview-collapsed")
+              .removeClass("hashview-expanded");
+          }
+        },
+        onSearch: (query: string) => {
+          currentSearchBox = query;
+          const { ep_weave } = clientVars;
+          reloadHashView(
+            ep_weave.title,
+            currentHashes,
+            query,
+            getCurrentSort()
+          );
+        },
+      })
     )
     .append(result)
-    .click(() => {
+    .on("click", () => {
       const collapsed = $(".hashview-collapsed");
       if (collapsed.length > 0) {
         $(".hashview")
@@ -377,17 +387,6 @@ exports.postToolbarInit = (hook: any, context: PostToolbarInit) => {
       }
     })
     .appendTo($editorcontainerbox);
-  /*
-  window.hvSelectHash = (selectedHash) => {
-    console.debug(logPrefix, "CLICKED", selectedHash);
-    const collapsed = $(".hashview-collapsed");
-    if (collapsed.length > 0) {
-      $(".hashview")
-        .removeClass("hashview-collapsed")
-        .addClass("hashview-expanded");
-    }
-  };
-  */
   const { toolbar } = context;
   overrideEmbedCommand(toolbar);
   $("#editbar > .menu_right").prepend(createMenuItem());

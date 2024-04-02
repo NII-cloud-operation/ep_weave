@@ -28,8 +28,15 @@ declare module "ep_search/setup" {
     shorttext?: string;
   };
 
+  export type SearchResponse = {
+    docs: PadType[];
+    numFound: number;
+    start: number;
+    numFoundExact: boolean;
+  };
+
   export type SearchEngine = {
-    search(query: string): Promise<PadType[]>;
+    search(query: string): Promise<SearchResponse>;
   };
 
   export function createSearchEngine(query: string): SearchEngine;
