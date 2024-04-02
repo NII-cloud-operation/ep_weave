@@ -1,10 +1,9 @@
 export type Callbacks = {
   onSearch: (query: string) => void;
   onSort: (sort: string) => void;
-  onClose?: () => void;
 };
 
-function createCloseButton(onClose: () => void) {
+export function createCloseButton(onClose: () => void) {
   const close = $("<div>")
     .addClass("hashview-close")
     .append($("<i>").addClass("buttonicon buttonicon-times"))
@@ -94,16 +93,10 @@ function createSearchBox(onSearch: (query: string) => void) {
 
 export function createToolbar(callbacks: Callbacks) {
   const searchBox = createSearchBox(callbacks.onSearch);
-  const closeButton = callbacks.onClose
-    ? createCloseButton(callbacks.onClose)
-    : null;
   const sort = createSortSelection(callbacks.onSort);
   const toolbar = $("<div></div>")
     .addClass("hashview-toolbar")
     .append(searchBox)
     .append(sort);
-  if (closeButton !== null) {
-    toolbar.append(closeButton);
-  }
   return toolbar;
 }

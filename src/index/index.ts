@@ -2,7 +2,7 @@ import { createHashItemView } from "../pad/static/js/hashitem";
 import { query } from "../pad/static/js/result";
 import { createToolbar } from "../pad/static/js/toolbar";
 
-const LIMIT_ITEMS = 50;
+const LIMIT_ITEMS = 20;
 
 async function updateIndex(
   container: JQuery,

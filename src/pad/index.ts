@@ -73,7 +73,7 @@ function traverseNodes(node: Node, handler: (node: Node) => void) {
   handler(node);
   (node.childNodes || []).forEach((child: Node) => {
     handler(child);
-    traverseNodes(node, handler);
+    traverseNodes(child, handler);
   });
 }
 
@@ -209,7 +209,7 @@ exports.registerRoute = (
   };
   const { app } = args;
   app.get("/ep_weave/api/search", apikeyChecker, searchHandler);
-  app.get("/t/:title", (req, res) => {
+  app.get("/t/:title(*)", (req, res) => {
     const { title } = req.params;
     getPadIdsByTitle(searchEngine, title)
       .then((ids) => {

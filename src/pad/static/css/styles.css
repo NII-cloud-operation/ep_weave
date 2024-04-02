@@ -17,16 +17,20 @@
     width: 100%;
     bottom: 0;
     border-top: 1px solid #ccc;
-    padding: 0.5em;
+    padding: 0;
+    height: 30vh;
+    max-height: 80vh;
 }
 
 #hashview {
-    max-height: 50vh;
     overflow-y: auto;
+    padding: 8px;
+    height: calc(100% - 92px);
 }
 
 .hashview-toolbar {
     display: flex;
+    padding: 8px;
 }
 
 .hashview-search {
@@ -43,7 +47,11 @@
 }
 
 .hashview-collapsed {
-    height: 1em;
+    height: 1em !important;
+}
+
+.hashview-collapsed .hashview-handle {
+    display: none;
 }
 
 .hashview-collapsed .hash-container {
@@ -55,7 +63,9 @@
 }
 
 .hashview-close {
-    margin: 7px;
+    position: absolute;
+    right: 1em;
+    top: 1em;
 }
 
 .hash-container {
@@ -103,4 +113,20 @@
 
 .hash-create .hash-title {
     color: #888;
+}
+
+.hashview-handle {
+    cursor: ns-resize;
+    width: 100%;
+    height: 4px;
+    background-color: #eee;
+}
+
+#hashview-navbar {
+    padding: 8px;
+}
+
+.hashview-path-separator {
+    color: #888;
+    margin: 0 8px;
 }

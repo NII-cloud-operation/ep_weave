@@ -9,14 +9,20 @@ import {
 import { createHashItemView } from "./hashitem";
 import { parse } from "./parser";
 import { query } from "./result";
-import { createToolbar } from "./toolbar";
+import { createToolbar, createCloseButton } from "./toolbar";
+import { initResizer, windowResized } from "./resizer";
 
 type PadRef = {
   id: string;
 };
 
+type RelatedHash = {
+  displayName: string;
+  hash: string;
+};
+
 const logPrefix = "[ep_weave/hashview]";
-let currentHashes: string[] = [];
+let currentHashes: RelatedHash[] = [];
 let currentSearchBox: string | null = null;
 let myPad: PadRef | null = null;
 let duplicatedPads: PadRef[] | null = null;
@@ -29,6 +35,7 @@ const LIMIT_HASH_VIEW_ITEMS = 50;
 
 function updateTitle(title: string) {
   document.title = `${title} | Etherpad`;
+  refreshNavbar($("#hashview-navbar"), title);
 }
 
 function getPadURL() {
@@ -72,6 +79,47 @@ function overrideEmbedCommand(toolbar: AceToolbar) {
     toolbar.toggleDropDown("embed");
     $("#linkinput").focus().select();
   });
+}
+
+function refreshNavbar(navbar: JQuery, title: string) {
+  navbar.empty();
+  navbar.append(
+    $("<a>")
+      .attr("href", "/")
+      .text("Index")
+      .addClass("hashview-path-segment hashview-path-index")
+  );
+  navbar.append($("<span>").addClass("hashview-path-separator").text("/"));
+  const pathSegments = title.split("/");
+  for (let i = 0; i < pathSegments.length - 1; i++) {
+    const segment = pathSegments[i];
+    const parentPath = pathSegments.slice(0, i + 1).join("/");
+    navbar.append(
+      $("<a>")
+        .addClass("hashview-path-segment")
+        .text(segment)
+        .attr("href", `/t/${encodeURIComponent(parentPath)}`)
+    );
+    navbar.append($("<span>").addClass("hashview-path-separator").text("/"));
+  }
+  navbar.append(
+    $("<span>")
+      .addClass("hashview-path-segment")
+      .text(pathSegments[pathSegments.length - 1])
+  );
+  navbar.append(
+    createCloseButton(() => {
+      const collapsed = $(".hashview-collapsed");
+      if (collapsed.length === 0) {
+        $(".hashview")
+          .addClass("hashview-collapsed")
+          .removeClass("hashview-expanded");
+      }
+      setTimeout(() => {
+        windowResized();
+      }, 100);
+    })
+  );
 }
 
 function getCurrentSort() {
@@ -206,6 +254,31 @@ function checkTitle(title: string) {
   checkTitleDuplicated(title);
 }
 
+async function loadChildPads(
+  title: string,
+  additionalQuery: string | null,
+  limit: number,
+  sort: string | undefined,
+  container: JQuery
+) {
+  const additionalLuceneQuery = additionalQuery
+    ? ` AND ${additionalQuery}`
+    : "";
+  const luceneQuery = `title:${title}/*${additionalLuceneQuery}`;
+  const { docs } = await query(luceneQuery, 0, limit, sort);
+  let empty = true;
+  (docs || [])
+    .filter((doc) => doc.id !== clientVars.padId)
+    .forEach((doc) => {
+      container.append(createHashItemView(doc));
+      empty = false;
+    });
+  if (empty) {
+    container.append($("<div></div>").text("No related pages"));
+  }
+  return !empty;
+}
+
 async function loadHashView(
   title: string,
   hash: string,
@@ -217,47 +290,32 @@ async function loadHashView(
   const additionalLuceneQuery = additionalQuery
     ? ` AND ${additionalQuery}`
     : "";
-  const dataForHash = await query(
-    `hash:"${hash}"${additionalLuceneQuery}`,
+  const luceneQuery =
+    title === hash.substring(1)
+      ? `hash:"${hash}"`
+      : `(hash:"${hash}" OR title:"${hash.substring(1)}")`;
+  const { docs } = await query(
+    `${luceneQuery}${additionalLuceneQuery}`,
     0,
     limit,
     sort
   );
   let empty = true;
-  (dataForHash.docs || [])
+  (docs || [])
     .filter((doc) => doc.id !== clientVars.padId)
     .forEach((doc) => {
       container.append(createHashItemView(doc));
       empty = false;
     });
-  if (
-    (dataForHash.docs || []).every((doc) => doc.title !== hash.substring(1)) &&
-    title !== hash.substring(1)
-  ) {
-    const dataForTitle = await query(
-      `title:${hash.substring(1)}${additionalLuceneQuery}`,
-      0,
-      limit,
-      sort
-    );
+  const titledPadExists = docs.some((doc) => doc.title === hash.substring(1));
+  if (title !== hash.substring(1) && !titledPadExists) {
     const anchor = $("<a></a>")
       .attr("href", `/t/${hash.substring(1)}`)
       .text(hash.substring(1));
-    const createClass =
-      (dataForTitle.docs || []).length === 0 ? "hash-create" : "";
+    const createClass = "hash-create";
     const hashLink = $("<div></div>")
       .append($("<div></div>").addClass("hash-title").append(anchor))
       .addClass(`hash-link ${createClass}`);
-    if (
-      (dataForTitle.docs || []).length > 0 &&
-      dataForTitle.docs[0].shorttext
-    ) {
-      hashLink.append(
-        $("<div></div>")
-          .addClass("hash-shorttext")
-          .append(dataForTitle.docs[0].shorttext)
-      );
-    }
     container.append(hashLink);
     empty = false;
   }
@@ -269,13 +327,24 @@ async function loadHashView(
 
 function reloadHashView(
   title: string,
-  hashes: string[],
+  hashes: RelatedHash[],
   additionalQuery: string | null,
   sort: string | null
 ) {
   const root = $("#hashview").empty();
-  const tasks = (hashes || []).map((hash) => {
-    root.append($("<div></div>").text(hash).addClass("hash-text"));
+  root.append($("<div></div>").text("Child pages").addClass("hash-text"));
+  const childContainer = $("<div></div>").addClass("hash-container");
+  root.append(childContainer);
+  loadChildPads(
+    title,
+    additionalQuery,
+    LIMIT_HASH_VIEW_ITEMS,
+    sort || undefined,
+    childContainer
+  );
+
+  const tasks = (hashes || []).map(({ displayName, hash }) => {
+    root.append($("<div></div>").text(displayName).addClass("hash-text"));
     const container = $("<div></div>").addClass("hash-container");
     root.append(container);
     return loadHashView(
@@ -283,7 +352,7 @@ function reloadHashView(
       hash,
       additionalQuery,
       LIMIT_HASH_VIEW_ITEMS,
-      sort !== null ? sort.toString() : undefined,
+      sort || undefined,
       container
     );
   });
@@ -316,9 +385,18 @@ exports.aceEditEvent = (hook: string, context: AceEditEventContext) => {
   }
   const { ep_weave } = clientVars;
   let { title, hashes } = parse((context.rep || {}).alltext || "");
+  let relatedHashes: RelatedHash[] = hashes.map((hash) => ({
+    displayName: hash,
+    hash,
+  }));
   if (title || myPad) {
     const myHash = `#${title || myPad?.id}`;
-    hashes = [myHash].concat(hashes.filter((h) => h !== myHash));
+    relatedHashes = [
+      {
+        displayName: "Pages referring to this page",
+        hash: myHash,
+      },
+    ].concat(relatedHashes.filter(({ hash }) => hash !== myHash));
   }
   if (ep_weave.title !== title) {
     console.debug(logPrefix, "Title changed", ep_weave.title, title);
@@ -329,22 +407,30 @@ exports.aceEditEvent = (hook: string, context: AceEditEventContext) => {
     checkTitle(title);
   }
   if (
-    currentHashes.length === hashes.length &&
-    currentHashes.every((val, index) => val === hashes[index])
+    currentHashes.length === relatedHashes.length &&
+    currentHashes.every((val, index) => val.hash === relatedHashes[index].hash)
   ) {
     // No changes
     return;
   }
-  currentHashes = hashes;
+  currentHashes = relatedHashes;
   console.debug(logPrefix, "EDITED", hashes);
-  reloadHashView(title, hashes, currentSearchBox, getCurrentSort());
+  reloadHashView(title, relatedHashes, currentSearchBox, getCurrentSort());
 };
 
 exports.postToolbarInit = (hook: any, context: PostToolbarInit) => {
   const $editorcontainerbox = $("#editorcontainerbox");
   const result = $("<div>").attr("id", "hashview");
+  const navbar = $("<div>").attr("id", "hashview-navbar");
+  if (clientVars && clientVars.ep_weave && clientVars.ep_weave.title) {
+    refreshNavbar(navbar, clientVars.ep_weave.title);
+  }
+  const handle = $("<div>").addClass("hashview-handle");
   $("<div>")
     .addClass("hashview hashview-expanded")
+    .attr("id", "hashview-container")
+    .append(handle)
+    .append(navbar)
     .append(
       createToolbar({
         onSort: (sort: string) => {
@@ -356,14 +442,6 @@ exports.postToolbarInit = (hook: any, context: PostToolbarInit) => {
             return;
           }
           reloadHashView(ep_weave.title, currentHashes, currentSearchBox, sort);
-        },
-        onClose: () => {
-          const collapsed = $(".hashview-collapsed");
-          if (collapsed.length === 0) {
-            $(".hashview")
-              .addClass("hashview-collapsed")
-              .removeClass("hashview-expanded");
-          }
         },
         onSearch: (query: string) => {
           currentSearchBox = query;
@@ -380,16 +458,21 @@ exports.postToolbarInit = (hook: any, context: PostToolbarInit) => {
     .append(result)
     .on("click", () => {
       const collapsed = $(".hashview-collapsed");
-      if (collapsed.length > 0) {
-        $(".hashview")
-          .removeClass("hashview-collapsed")
-          .addClass("hashview-expanded");
+      if (collapsed.length === 0) {
+        return;
       }
+      $(".hashview")
+        .removeClass("hashview-collapsed")
+        .addClass("hashview-expanded");
+      setTimeout(() => {
+        windowResized();
+      }, 100);
     })
     .appendTo($editorcontainerbox);
   const { toolbar } = context;
   overrideEmbedCommand(toolbar);
   $("#editbar > .menu_right").prepend(createMenuItem());
+  initResizer(handle);
   const { ep_weave } = clientVars;
   if (!ep_weave) {
     return;
