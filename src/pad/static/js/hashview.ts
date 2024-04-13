@@ -267,12 +267,16 @@ async function loadChildPads(
   const luceneQuery = `title:${title}/*${additionalLuceneQuery}`;
   const { docs } = await query(luceneQuery, 0, limit, sort);
   let empty = true;
+  const hashViews: Promise<JQuery>[] = [];
   (docs || [])
     .filter((doc) => doc.id !== clientVars.padId)
     .forEach((doc) => {
-      container.append(createHashItemView(doc));
+      hashViews.push(createHashItemView(doc));
       empty = false;
     });
+  (await Promise.all(hashViews)).forEach((hashView) => {
+    container.append(hashView);
+  });
   if (empty) {
     container.append($("<div></div>").text("No related pages"));
   }
@@ -301,12 +305,16 @@ async function loadHashView(
     sort
   );
   let empty = true;
+  const hashViews: Promise<JQuery>[] = [];
   (docs || [])
     .filter((doc) => doc.id !== clientVars.padId)
     .forEach((doc) => {
-      container.append(createHashItemView(doc));
+      hashViews.push(createHashItemView(doc));
       empty = false;
     });
+  (await Promise.all(hashViews)).forEach((hashView) => {
+    container.append(hashView);
+  });
   const titledPadExists = docs.some((doc) => doc.title === hash.substring(1));
   if (title !== hash.substring(1) && !titledPadExists) {
     const anchor = $("<a></a>")

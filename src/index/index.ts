@@ -18,8 +18,10 @@ async function updateIndex(
     sort
   );
   container.empty();
-  for (const doc of result.docs) {
-    container.append(createHashItemView(doc));
+  for (const hashView of await Promise.all(
+    result.docs.map((doc) => createHashItemView(doc))
+  )) {
+    container.append(hashView);
   }
   if (result.numFound - result.start > result.docs.length) {
     const moreContainer = $("<div></div>").addClass(
