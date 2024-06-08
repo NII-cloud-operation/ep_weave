@@ -19,12 +19,15 @@ RUN git clone -b feature/search-engine-ep2 https://github.com/yacchin1205/ep_sea
 
 USER etherpad
 
-ARG ETHERPAD_PLUGINS="ep_align ep_markdown ep_embedded_hyperlinks2 ep_font_color ep_headings2  ep_image_upload ep_openid_connect ep_user_displayname"
+ARG ETHERPAD_PLUGINS="ep_align ep_markdown ep_embedded_hyperlinks2 ep_font_color ep_headings2  ep_image_upload"
 ARG ETHERPAD_LOCAL_PLUGINS="/tmp/ep_weave/ /tmp/ep_search/"
 RUN bin/installDeps.sh && rm -rf ~/.npm && \
     if [ ! -z "${ETHERPAD_PLUGINS}" ]; then \
-        pnpm run install-plugins ${ETHERPAD_PLUGINS}; \
+        pnpm run plugins i ${ETHERPAD_PLUGINS}; \
     fi && \
     if [ ! -z "${ETHERPAD_LOCAL_PLUGINS}" ]; then \
-        pnpm run install-plugins ${ETHERPAD_LOCAL_PLUGINS:+--path ${ETHERPAD_LOCAL_PLUGINS}}; \
+        pnpm run plugins i ${ETHERPAD_LOCAL_PLUGINS:+--path ${ETHERPAD_LOCAL_PLUGINS}}; \
     fi
+
+# If you don't want to use the OpenID Connect plugin, you can comment out the following line.
+RUN pnpm run plugins i ep_openid_connect ep_user_displayname ep_stable_authorid
