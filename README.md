@@ -14,8 +14,8 @@ Use docker-compose to try ep_weave. Run the container as described below and acc
 Then click the [New Pad] button to create a new page.
 
 ```
-docker-compose build
-docker-compose up -d
+docker compose build
+docker compose up -d
 ```
 
 
