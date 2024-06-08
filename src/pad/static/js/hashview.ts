@@ -31,7 +31,7 @@ const ACE_EDITOR_TAG = "searchHash";
 const ACE_EDITOR_MODIFIER_PATTERN = /(^| )searchHash:(\S+)/g;
 const ACE_EDITOR_CLASS = "hashview-editor-link";
 const MAX_OPEN_DUPLICATED_PADS = 3;
-const LIMIT_HASH_VIEW_ITEMS = 50;
+const LIMIT_HASH_VIEW_ITEMS = 60;
 
 function updateTitle(title: string) {
   document.title = `${title} | Etherpad`;
