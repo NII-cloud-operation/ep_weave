@@ -1,5 +1,23 @@
 import { SearchResponse } from "ep_search/setup";
 
+export function escapeForText(query: string): string {
+  let escaped = query;
+  escaped = escaped.replace(/\\/g, "\\\\");
+  escaped = escaped.replace(/:/g, "\\:");
+  escaped = escaped.replace(/\(/g, "\\(");
+  escaped = escaped.replace(/\)/g, "\\)");
+  escaped = escaped.replace(/\[/g, "\\[");
+  escaped = escaped.replace(/\]/g, "\\]");
+  escaped = escaped.replace(/\{/g, "\\{");
+  escaped = escaped.replace(/\}/g, "\\}");
+  escaped = escaped.replace(/\//g, "\\/");
+  escaped = escaped.replace(/"/g, '\\"');
+  escaped = escaped.replace(/ /g, "\\ ");
+  escaped = escaped.replace(/~/g, "\\~");
+  escaped = escaped.replace(/!/g, "\\!");
+  return escaped;
+}
+
 export function query(
   query: string,
   start?: number,

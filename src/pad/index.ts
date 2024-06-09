@@ -1,25 +1,26 @@
 import fs from "fs";
 import { Request, Response, NextFunction } from "express";
-import HTMLParser, { Node } from "node-html-parser";
-import { createSearchEngine, SearchEngine, PadType } from "ep_search/setup";
+import { createSearchEngine, SearchEngine } from "ep_search/setup";
 import {
   ExpressCreateServerArgs,
   PreAuthorizeArgs,
 } from "ep_etherpad-lite/hooks";
-import { tokenize } from "./static/js/parser";
+import { logPrefix } from "./util/log";
+import { updateTitles } from "./database/title";
+import { escapeForText } from "./static/js/result";
 
 const absolutePaths = require("ep_etherpad-lite/node/utils/AbsolutePaths");
 const argv = require("ep_etherpad-lite/node/utils/Cli").argv;
 const { v4: uuidv4 } = require("uuid");
 const settings = require("ep_etherpad-lite/node/utils/Settings");
 const api = require("ep_etherpad-lite/node/db/API");
-const { decode, encode } = require("he");
 
-const logPrefix = "[ep_weave]";
 let apikey: string | null = null;
 
 async function getPadIdsByTitle(searchEngine: SearchEngine, title: string) {
-  const results = await searchEngine.search(`title:"${title}"`);
+  const results = await searchEngine.search(
+    `title:"${escapeForText(title)}"`
+  );
   console.debug(logPrefix, `Search by title ${title}`, results);
   if (!results) {
     return null;
@@ -49,82 +50,6 @@ async function createNewPadForTitle(
   const body = req.query.body || "";
   await api.createPad(padId, `${title}\n\n${body}`);
   return padId;
-}
-
-function replaceHashToken(token: string, oldtitle: string, newtitle: string) {
-  if (token === `#${oldtitle}`) {
-    return `#${newtitle}`;
-  }
-  return token;
-}
-
-function replaceHash(text: string, oldtitle: string, newtitle: string) {
-  let newtext = "";
-  let remain = text;
-  while (remain.length > 0) {
-    const token = tokenize(remain);
-    newtext += replaceHashToken(token, oldtitle, newtitle);
-    remain = remain.substring(token.length);
-  }
-  return newtext;
-}
-
-function traverseNodes(node: Node, handler: (node: Node) => void) {
-  handler(node);
-  (node.childNodes || []).forEach((child: Node) => {
-    handler(child);
-    traverseNodes(child, handler);
-  });
-}
-
-function replaceHashHtml(html: string, oldtitle: string, newtitle: string) {
-  let html_ = html;
-  const m = html.match(/^\<\!DOCTYPE\s+HTML\>(.+)$/);
-  if (m) {
-    html_ = m[1];
-  }
-  const root = HTMLParser.parse(html_);
-  traverseNodes(root, (node) => {
-    if (node.nodeType !== 3 /* Node.TEXT_NODE */) {
-      return;
-    }
-    node.rawText = encode(
-      replaceHash(decode(node.rawText), oldtitle, newtitle)
-    );
-  });
-  return root.toString();
-}
-
-async function updateHash(pad: PadType, oldtitle: string, newtitle: string) {
-  const { html } = await api.getHTML(pad.id);
-  console.debug(logPrefix, "Update hash with text", pad, ", src=", html);
-  const newhtml = replaceHashHtml(html, oldtitle, newtitle);
-  await api.setHTML(pad.id, newhtml);
-  console.debug(
-    logPrefix,
-    "Update hash with text",
-    pad,
-    ", src=",
-    html,
-    ", desst=",
-    newhtml
-  );
-  return pad.id;
-}
-
-async function updateHashes(
-  searchEngine: SearchEngine,
-  oldtitle: string,
-  newtitle: string
-) {
-  const results = await searchEngine.search(`hash:"#${oldtitle}"`);
-  const { docs: pads } = results;
-  const updates = await Promise.all(
-    pads.map((pad) => updateHash(pad, oldtitle, newtitle))
-  );
-  return {
-    updates,
-  };
 }
 
 exports.preAuthorize = (
@@ -258,7 +183,7 @@ exports.registerRoute = (
       return;
     }
     console.debug(logPrefix, "Update", oldtitle, newtitle);
-    updateHashes(searchEngine, oldtitle, newtitle)
+    updateTitles(searchEngine, oldtitle, newtitle)
       .then((result) => {
         res.send(JSON.stringify(result));
       })

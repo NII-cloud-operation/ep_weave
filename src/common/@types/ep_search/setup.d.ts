@@ -35,8 +35,14 @@ declare module "ep_search/setup" {
     numFoundExact: boolean;
   };
 
+  export type SearchOptions = {
+    start?: number;
+    rows?: number;
+    sort?: string;
+  };
+
   export type SearchEngine = {
-    search(query: string): Promise<SearchResponse>;
+    search(query: string, opts?: SearchOptions): Promise<SearchResponse>;
   };
 
   export function createSearchEngine(query: string): SearchEngine;

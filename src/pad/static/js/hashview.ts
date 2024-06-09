@@ -8,7 +8,7 @@ import {
 } from "ep_etherpad-lite/hooks";
 import { createHashItemView } from "./hashitem";
 import { parse } from "./parser";
-import { query } from "./result";
+import { query, escapeForText } from "./result";
 import { createToolbar, createCloseButton } from "./toolbar";
 import { initResizer, windowResized } from "./resizer";
 
@@ -189,7 +189,11 @@ function checkTitleChanged(title: string) {
   if (ep_weave.titleChangedChecked === title) {
     return;
   }
-  query(`hash:"#${ep_weave.oldTitle}"`)
+  query(
+    `hash:"#${escapeForText(ep_weave.oldTitle)}" OR title:${escapeForText(
+      ep_weave.oldTitle
+    )}/*`
+  )
     .then((response) => {
       const data = response.docs;
       if (!data || data.length === 0) {
@@ -201,7 +205,9 @@ function checkTitleChanged(title: string) {
         oldtitle: ep_weave.oldTitle,
         newtitle: title,
       };
-      $(".hashview-change-title").text(`Title changed: ${title}`).show();
+      $(".hashview-change-title")
+        .text(`Title changed: ${title} from ${ep_weave.oldTitle}`)
+        .show();
       ep_weave.titleChangedChecked = title;
     })
     .catch((err) => {
@@ -214,7 +220,7 @@ function checkTitleDuplicated(title: string, customClientVars?: ClientVars) {
   if (ep_weave.titleDuplicatedChecked === title) {
     return;
   }
-  query(`title:${title}`)
+  query(`title:"${escapeForText(title)}"`)
     .then((data) => {
       ep_weave.titleDuplicatedChecked = title;
       const filtered = (data.docs || []).filter(
@@ -238,6 +244,7 @@ function checkTitleDuplicated(title: string, customClientVars?: ClientVars) {
         .slice(0, MAX_OPEN_DUPLICATED_PADS);
       $(".hashview-title-duplicated").text(`Title duplicated: ${title}`).show();
       $(".hashview-change-title").hide();
+      changedTitle = null;
     })
     .catch((err) => {
       console.error(logPrefix, "Error", err);
@@ -248,6 +255,7 @@ function checkTitle(title: string) {
   const { ep_weave } = clientVars;
   if (ep_weave && ep_weave.oldTitle === title) {
     $(".hashview-change-title").hide();
+    changedTitle = null;
   } else {
     checkTitleChanged(title);
   }
@@ -264,7 +272,7 @@ async function loadChildPads(
   const additionalLuceneQuery = additionalQuery
     ? ` AND ${additionalQuery}`
     : "";
-  const luceneQuery = `title:${title}/*${additionalLuceneQuery}`;
+  const luceneQuery = `title:${escapeForText(title)}/*${additionalLuceneQuery}`;
   const { docs } = await query(luceneQuery, 0, limit, sort);
   let empty = true;
   const hashViews: Promise<JQuery>[] = [];
@@ -296,8 +304,10 @@ async function loadHashView(
     : "";
   const luceneQuery =
     title === hash.substring(1)
-      ? `hash:"${hash}"`
-      : `(hash:"${hash}" OR title:"${hash.substring(1)}")`;
+      ? `hash:"${escapeForText(hash)}"`
+      : `(hash:"${escapeForText(hash)}" OR title:"${escapeForText(
+          hash.substring(1)
+        )}")`;
   const { docs } = await query(
     `${luceneQuery}${additionalLuceneQuery}`,
     0,
@@ -367,6 +377,19 @@ function reloadHashView(
   Promise.all(tasks).then(() => {});
 }
 
+function addBeforeUnloadListener() {
+  $(window).on("beforeunload", (event) => {
+    if (!changedTitle) {
+      return undefined;
+    }
+    if (changedTitle.oldtitle === changedTitle.newtitle) {
+      return undefined;
+    }
+    event.preventDefault();
+    return "Title has been changed. Are you sure to leave?";
+  });
+}
+
 exports.postAceInit = (hook: any, context: PostAceInitContext) => {
   const { ace, pad, clientVars } = context;
   myPad = {
@@ -381,6 +404,7 @@ exports.postAceInit = (hook: any, context: PostAceInitContext) => {
   };
   updateTitle(title);
   checkTitleDuplicated(title, clientVars);
+  addBeforeUnloadListener();
 };
 
 exports.aceEditEvent = (hook: string, context: AceEditEventContext) => {
@@ -460,6 +484,21 @@ exports.postToolbarInit = (hook: any, context: PostToolbarInit) => {
             query,
             getCurrentSort()
           );
+        },
+        onCreate: (query: string) => {
+          const { ep_weave } = clientVars;
+          if (!ep_weave) {
+            throw new Error("Not initialized");
+          }
+          if (ep_weave.title === undefined) {
+            throw new Error("Title is not set");
+          }
+          let { title } = ep_weave;
+          if (!title.endsWith("/")) {
+            title += "/";
+          }
+          title += query;
+          window.open(`/t/${encodeURIComponent(title)}`, "_blank");
         },
       })
     )
