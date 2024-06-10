@@ -123,7 +123,10 @@ export async function updateTitles(
   oldTitle: string,
   newTitle: string
 ) {
-  const childPadsQuery = `title:${escapeForText(oldTitle)}/*`;
+  if (oldTitle.trim().length === 0 || newTitle.trim().length === 0) {
+    throw new Error("Title must not be empty");
+  }
+  const childPadsQuery = `title:${escapeForText(`${oldTitle}/`)}*`;
   const results = await searchEngine.search(childPadsQuery, {
     rows: MAX_PAGES + 1,
   });

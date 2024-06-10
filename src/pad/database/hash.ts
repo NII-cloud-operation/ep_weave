@@ -2,7 +2,7 @@ import HTMLParser, { Node } from "node-html-parser";
 import { SearchEngine, PadType } from "ep_search/setup";
 import { tokenize } from "../static/js/parser";
 import { logPrefix } from "../util/log";
-import { escapeForText } from "../static/js/result";
+import { getHashQuery } from "../static/js/hash";
 
 const api = require("ep_etherpad-lite/node/db/API");
 const { decode, encode } = require("he");
@@ -75,12 +75,9 @@ export async function updateHashes(
   oldtitle: string,
   newtitle: string
 ) {
-  const results = await searchEngine.search(
-    `hash:"#${escapeForText(oldtitle)}"`,
-    {
-      rows: MAX_PAGES + 1,
-    }
-  );
+  const results = await searchEngine.search(getHashQuery(oldtitle), {
+    rows: MAX_PAGES + 1,
+  });
   const { docs: pads, numFound } = results;
   if (numFound >= MAX_PAGES) {
     console.warn(logPrefix, `Too many references for ${oldtitle}: ${numFound}`);

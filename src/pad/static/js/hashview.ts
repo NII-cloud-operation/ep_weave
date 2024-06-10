@@ -11,6 +11,7 @@ import { parse } from "./parser";
 import { query, escapeForText } from "./result";
 import { createToolbar, createCloseButton } from "./toolbar";
 import { initResizer, windowResized } from "./resizer";
+import { getHashQuery } from "./hash";
 
 type PadRef = {
   id: string;
@@ -190,7 +191,7 @@ function checkTitleChanged(title: string) {
     return;
   }
   query(
-    `hash:"#${escapeForText(ep_weave.oldTitle)}" OR title:${escapeForText(
+    `${getHashQuery(ep_weave.oldTitle)} OR title:${escapeForText(
       ep_weave.oldTitle
     )}/*`
   )
@@ -269,10 +270,16 @@ async function loadChildPads(
   sort: string | undefined,
   container: JQuery
 ) {
+  if (title.trim().length === 0) {
+    container.append($("<div></div>").text("No related pages"));
+    return false;
+  }
   const additionalLuceneQuery = additionalQuery
     ? ` AND ${additionalQuery}`
     : "";
-  const luceneQuery = `title:${escapeForText(title)}/*${additionalLuceneQuery}`;
+  const luceneQuery = `title:${escapeForText(
+    `${title}/`
+  )}*${additionalLuceneQuery}`;
   const { docs } = await query(luceneQuery, 0, limit, sort);
   let empty = true;
   const hashViews: Promise<JQuery>[] = [];
@@ -304,8 +311,8 @@ async function loadHashView(
     : "";
   const luceneQuery =
     title === hash.substring(1)
-      ? `hash:"${escapeForText(hash)}"`
-      : `(hash:"${escapeForText(hash)}" OR title:"${escapeForText(
+      ? getHashQuery(hash)
+      : `(${getHashQuery(hash)} OR title:"${escapeForText(
           hash.substring(1)
         )}")`;
   const { docs } = await query(
@@ -430,7 +437,7 @@ exports.aceEditEvent = (hook: string, context: AceEditEventContext) => {
       },
     ].concat(relatedHashes.filter(({ hash }) => hash !== myHash));
   }
-  if (ep_weave.title !== title) {
+  if (ep_weave.title !== title && title.length > 0) {
     console.debug(logPrefix, "Title changed", ep_weave.title, title);
     ep_weave.title = title;
     ep_weave.titleChangedChecked = null;
@@ -500,7 +507,7 @@ exports.postToolbarInit = (hook: any, context: PostToolbarInit) => {
           title += query;
           window.open(`/t/${encodeURIComponent(title)}`, "_blank");
         },
-      })
+      }).prepend($("<div>").text(">").addClass("hashview-toolbar-child-marker"))
     )
     .append(result)
     .on("click", () => {
@@ -530,7 +537,7 @@ exports.postToolbarInit = (hook: any, context: PostToolbarInit) => {
 exports.aceGetFilterStack = (hook: any, context: AceGetFilterStackContext) => {
   const { linestylefilter } = context;
   return [
-    linestylefilter.getRegexpFilter(/\#\S+/g, ACE_EDITOR_TAG),
+    linestylefilter.getRegexpFilter(/\#[^#\s]+/g, ACE_EDITOR_TAG),
     linestylefilter.getRegexpFilter(/\[\[\S+\]\]/g, ACE_EDITOR_TAG),
   ];
 };

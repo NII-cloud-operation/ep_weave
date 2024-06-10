@@ -7,14 +7,14 @@ function removeMd(text: string) {
 }
 
 export function tokenize(text: string) {
-  const found = text.search(/\#\S+/);
+  const found = text.search(/\#[^#\s]+/);
   if (found < 0) {
     return text;
   }
   if (found > 0) {
     return text.substring(0, found);
   }
-  const m = text.match(/(\#\S+).*/);
+  const m = text.match(/(\#[^#\s]+).*/);
   if (m === null) {
     throw new Error('Unexpected error');
   }
