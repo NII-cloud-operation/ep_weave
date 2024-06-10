@@ -1,7 +1,7 @@
 import HTMLParser, { Node } from "node-html-parser";
 import { SearchEngine, PadType } from "ep_search/setup";
 import removeMdBase from "remove-markdown";
-import { updateHashes } from "./hash";
+import { searchHashes, updateHash } from "./hash";
 import { logPrefix } from "../util/log";
 import { escapeForText } from "../static/js/result";
 
@@ -12,10 +12,21 @@ const { decode, encode } = require("he");
 const MAX_PAGES = 10000;
 
 type TitleUpdateResult = {
-  id: string;
+  oldTitle: string;
+  newTitle: string;
   hashes: {
     updates: string[];
   };
+};
+
+type HashUpdate = {
+  oldTitle: string;
+  newTitle: string;
+};
+
+type HashUpdateCommand = {
+  id: string;
+  updates: HashUpdate[];
 };
 
 function removeMd(baseText: string) {
@@ -44,7 +55,11 @@ function replaceTitle(text: string, oldtitle: string, newtitle: string) {
   return text.replace(oldtitle, newtitle);
 }
 
-function replaceTitleHtml(html: string, oldtitle: string, newtitle: string) {
+function replaceTitleHtml(
+  html: string,
+  oldtitle: string,
+  newtitle: string
+): string | null {
   let html_ = html;
   const m = html.match(/^\<\!DOCTYPE\s+HTML\>(.+)$/);
   if (m) {
@@ -70,7 +85,7 @@ function replaceTitleHtml(html: string, oldtitle: string, newtitle: string) {
   });
   if (!replaced) {
     console.warn(logPrefix, "Title not found in HTML", oldtitle, html);
-    return html;
+    return null;
   }
   return root.toString();
 }
@@ -84,13 +99,26 @@ async function updateTitleContent(
   console.info(logPrefix, "Update title", pad.id, oldTitle, newTitle);
   const { html } = await api.getHTML(pad.id);
   const replacedHtml = replaceTitleHtml(html, oldTitle, newTitle);
+  if (replacedHtml === null) {
+    console.warn(logPrefix, "Title not found in HTML", oldTitle, newTitle);
+    const updates = await searchHashes(searchEngine, oldTitle);
+    return {
+      oldTitle,
+      newTitle,
+      hashes: {
+        updates: updates.map((pad) => pad.id),
+      },
+    };
+  }
   await api.setHTML(pad.id, replacedHtml);
 
-  console.log(logPrefix, "Update hashes", pad.id);
-  const updatedIds = await updateHashes(searchEngine, oldTitle, newTitle);
+  const updates = await searchHashes(searchEngine, oldTitle);
   return {
-    id: pad.id,
-    hashes: updatedIds,
+    oldTitle,
+    newTitle,
+    hashes: {
+      updates: updates.map((pad) => pad.id),
+    },
   };
 }
 
@@ -100,7 +128,7 @@ async function updateTitle(
   oldTitle: string,
   newTitle: string
 ): Promise<TitleUpdateResult | null> {
-  console.log(logPrefix, "Updating", pad);
+  console.debug(logPrefix, "Updating", pad);
   const oldChildTitle = pad.title;
   if (!oldChildTitle.startsWith(`${oldTitle}/`)) {
     console.warn(
@@ -116,6 +144,24 @@ async function updateTitle(
     oldChildTitle,
     newChildTitle
   );
+}
+
+function getUpdatedPads(
+  titlesUpdates: TitleUpdateResult[]
+): HashUpdateCommand[] {
+  const allHashes = titlesUpdates.reduce((acc, update) => {
+    return acc.concat(update.hashes.updates);
+  }, [] as string[]);
+  const uniqueHashes = Array.from(new Set(allHashes));
+  return uniqueHashes.map((id) => {
+    const updates = titlesUpdates.filter((update) =>
+      update.hashes.updates.includes(id)
+    );
+    return {
+      id,
+      updates,
+    };
+  });
 }
 
 export async function updateTitles(
@@ -142,9 +188,25 @@ export async function updateTitles(
       updateTitle(searchEngine, pad, oldTitle, newTitle)
     )
   );
-  const hashesUpdates = await updateHashes(searchEngine, oldTitle, newTitle);
+  const titlesUpdates = updates.filter(
+    (update) => update !== null
+  ) as TitleUpdateResult[];
+  const hashes = await searchHashes(searchEngine, oldTitle);
+  const hashUpdates = await Promise.all(
+    getUpdatedPads(
+      titlesUpdates.concat([
+        {
+          oldTitle,
+          newTitle,
+          hashes: {
+            updates: hashes.map((pad) => pad.id),
+          },
+        },
+      ])
+    ).map((command) => updateHash(command.id, command.updates))
+  );
   return {
-    hashes: hashesUpdates,
-    titles: updates.filter((update) => update !== null) as TitleUpdateResult[],
+    titles: updates,
+    hashes: hashUpdates,
   };
 }
