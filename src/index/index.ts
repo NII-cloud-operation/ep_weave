@@ -2,7 +2,7 @@ import { createHashItemView } from "../pad/static/js/hashitem";
 import { query } from "../pad/static/js/result";
 import { createToolbar } from "../pad/static/js/toolbar";
 
-const LIMIT_ITEMS = 20;
+const LIMIT_ITEMS = 60;
 
 async function updateIndex(
   container: JQuery,
@@ -68,36 +68,38 @@ export default function init() {
   $("#weave-error-close").on("click", () => {
     closeErrorMessage();
   });
-  $("#weave-index .weave-toolbar").append(
-    createToolbar({
-      onSort: (sort) => {
-        updateIndex(rootContainer, undefined, 0, 5, sort)
-          .then(() => {
-            console.log("Index updated");
-          })
-          .catch((err) => {
-            showErrorMessage(
-              `Error retrieving index: ${
-                err.stack || err.message || String(err)
-              }`
-            );
-          });
-      },
-      onSearch: (query) => {
-        updateIndex(rootContainer, query)
-          .then(() => {
-            console.log("Index updated");
-          })
-          .catch((err) => {
-            showErrorMessage(
-              `Error retrieving index: ${
-                err.stack || err.message || String(err)
-              }`
-            );
-          });
-      },
-    })
-  );
+  $("#weave-index .weave-toolbar")
+    .append($("<div>").text("ep_weave").addClass("weave-title"))
+    .append(
+      createToolbar({
+        onSort: (sort) => {
+          updateIndex(rootContainer, undefined, 0, LIMIT_ITEMS, sort)
+            .then(() => {
+              console.log("Index updated");
+            })
+            .catch((err) => {
+              showErrorMessage(
+                `Error retrieving index: ${
+                  err.stack || err.message || String(err)
+                }`
+              );
+            });
+        },
+        onSearch: (query) => {
+          updateIndex(rootContainer, query)
+            .then(() => {
+              console.log("Index updated");
+            })
+            .catch((err) => {
+              showErrorMessage(
+                `Error retrieving index: ${
+                  err.stack || err.message || String(err)
+                }`
+              );
+            });
+        },
+      })
+    );
   updateIndex(rootContainer)
     .then(() => {
       console.log("Index updated");

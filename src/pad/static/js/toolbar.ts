@@ -1,6 +1,7 @@
 export type Callbacks = {
   onSearch: (query: string) => void;
   onSort: (sort: string) => void;
+  onCreate?: (query: string) => void;
 };
 
 export function createCloseButton(onClose: () => void) {
@@ -47,7 +48,10 @@ function createSortSelection(onSort: (sort: string) => void) {
   return sort;
 }
 
-function createSearchBox(onSearch: (query: string) => void) {
+function createSearchBox(
+  onSearch: (query: string) => void,
+  onCreate?: (query: string) => void
+) {
   const searchBox = $("<input>")
     .addClass("hashview-search-box")
     .attr("type", "search")
@@ -78,7 +82,11 @@ function createSearchBox(onSearch: (query: string) => void) {
     if (typeof query !== "string") {
       return;
     }
-    window.open(`/t/${encodeURIComponent(query)}`, "_blank");
+    if (!onCreate) {
+      window.open(`/t/${encodeURIComponent(query)}`, "_blank");
+      return;
+    }
+    onCreate(query);
   });
   searchBox.on("input", () => {
     const query = searchBox.val();
@@ -92,7 +100,7 @@ function createSearchBox(onSearch: (query: string) => void) {
 }
 
 export function createToolbar(callbacks: Callbacks) {
-  const searchBox = createSearchBox(callbacks.onSearch);
+  const searchBox = createSearchBox(callbacks.onSearch, callbacks.onCreate);
   const sort = createSortSelection(callbacks.onSort);
   const toolbar = $("<div></div>")
     .addClass("hashview-toolbar")
