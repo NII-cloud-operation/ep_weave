@@ -28,7 +28,7 @@
   </fieldType>
   <fieldType name="hash" class="solr.TextField" positionIncrementGap="100" autoGeneratePhraseQueries="false">
     <analyzer>
-      <tokenizer class="solr.PatternTokenizerFactory" pattern="#\S+" group="0"/>
+      <tokenizer class="solr.PatternTokenizerFactory" pattern="#[^#\s]+" group="0"/>
     </analyzer>
   </fieldType>
 

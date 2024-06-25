@@ -1,29 +1,33 @@
-FROM etherpad/etherpad
+FROM mcr.microsoft.com/devcontainers/typescript-node:18 AS build-stage
+
+COPY . /app/ep_weave
+RUN cd /app/ep_weave \
+    && ls -la /app/ep_weave \
+    && npm i --include dev && npm run build
+
+FROM etherpad/etherpad:2
 
 USER root
 
-COPY . /tmp/ep_weave
-RUN cd /tmp/ep_weave \
-    && ls -la /tmp/ep_weave \
-    && npm pack
+COPY --from=build-stage /app/ep_weave /tmp/ep_weave
 
 # ep_search
-RUN git clone -b feature/search-engine https://github.com/NII-cloud-operation/ep_search.git /tmp/ep_search \
+RUN git clone -b feature/search-engine-ep2 https://github.com/yacchin1205/ep_search.git /tmp/ep_search \
     && cd /tmp/ep_search \
     && ls -la /tmp/ep_search \
     && npm pack
 
-RUN npm install --no-save --legacy-peer-deps /tmp/ep_weave/ep_weave-0.1.0.tgz \
-        /tmp/ep_search/ep_search-0.1.0.tgz \
-        ep_align \
-        ep_embedded_hyperlinks2 \
-        ep_font_color \
-        ep_headings2 \
-        ep_markdown \
-        ep_image_upload \
-        ep_openid_connect \
-        ep_oauth2 \
-    && src/bin/installDeps.sh \
-    && rm -rf ~/.npm
-
 USER etherpad
+
+ARG ETHERPAD_PLUGINS="ep_align ep_markdown ep_embedded_hyperlinks2 ep_font_color ep_headings2  ep_image_upload"
+ARG ETHERPAD_LOCAL_PLUGINS="/tmp/ep_weave/ /tmp/ep_search/"
+RUN bin/installDeps.sh && rm -rf ~/.npm && \
+    if [ ! -z "${ETHERPAD_PLUGINS}" ]; then \
+        pnpm run plugins i ${ETHERPAD_PLUGINS}; \
+    fi && \
+    if [ ! -z "${ETHERPAD_LOCAL_PLUGINS}" ]; then \
+        pnpm run plugins i ${ETHERPAD_LOCAL_PLUGINS:+--path ${ETHERPAD_LOCAL_PLUGINS}}; \
+    fi
+
+# If you don't want to use the OpenID Connect plugin, you can comment out the following line.
+RUN pnpm run plugins i ep_openid_connect ep_user_displayname ep_stable_authorid

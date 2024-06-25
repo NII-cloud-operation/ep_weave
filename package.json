@@ -11,20 +11,23 @@
     "minisearch": "^6.0.1",
     "node-html-parser": "^6.1.5",
     "remove-markdown": "^0.5.0",
-    "solr-client": "^0.10.0-rc10",
     "uuid": "^9.0.0"
   },
   "engines": {
     "node": ">=12.17.0"
   },
   "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/jquery": "^3.5.29",
+    "@types/node": "^20.11.30",
     "eslint": "^8.11.0",
     "eslint-config-etherpad": "^3.0.9",
-    "typescript": "^4.5.5"
+    "typescript": "^4.9.5"
   },
   "scripts": {
     "lint": "eslint .",
-    "lint:fix": "eslint --fix ."
+    "lint:fix": "eslint --fix .",
+    "build": "tsc -p tsconfig.index.json && tsc -p tsconfig.editor.json && mv lib/pad/static/js/* lib/static/js/ && rm -fr lib/pad/static && mv lib/pad/* lib/ && rm -fr lib/pad && cp -fr src/pad/templates lib/ && cp -fr src/pad/static/css lib/static/ && cp -fr lib/static ."
   },
   "peerDependencies": {
     "ep_etherpad-lite": ">=1.8.6"
