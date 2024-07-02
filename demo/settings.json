@@ -102,7 +102,7 @@
   /*
    * Name your instance!
    */
-  "title": "${TITLE:Etherpad}",
+  "title": "${TITLE:EP\ud83e\uddf6\ud83e\udea1}", /* Ball of Yarn and Sewing needle */
 
   /*
    * Pathname of the favicon you want to use. If null, the skin's favicon is

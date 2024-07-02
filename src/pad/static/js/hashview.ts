@@ -35,7 +35,7 @@ const MAX_OPEN_DUPLICATED_PADS = 3;
 const LIMIT_HASH_VIEW_ITEMS = 60;
 
 function updateTitle(title: string) {
-  document.title = `${title} | Etherpad`;
+  document.title = `${title} | EP\u{1F9F6}\u{1FAA1}`;
   refreshNavbar($("#hashview-navbar"), title);
 }
 
