@@ -285,8 +285,10 @@
    *
    * Pad creation is only via the API.
    * This applies both to group pads and regular pads.
+   *
+   * ep_weave does not allow new Pad creation by `/p/xxxx` URL.
    */
-  "editOnly": "${EDIT_ONLY:false}",
+  "editOnly": "true",
 
   /*
    * If true, all css & js will be minified before sending to the client.
