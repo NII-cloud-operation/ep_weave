@@ -57,3 +57,8 @@ export async function applyReplaceSet(
   }
   await padMessageHandler.updatePadClients(pad);
 }
+
+export async function getAText(padID: string) {
+  const pad = await getPadSafe(padID, true);
+  return pad.atext;
+}

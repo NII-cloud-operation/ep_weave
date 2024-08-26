@@ -2,7 +2,7 @@ import { SearchEngine, PadType } from "ep_search/setup";
 import { tokenize } from "../static/js/parser";
 import { logPrefix } from "../util/log";
 import { getHashQuery } from "../static/js/hash";
-import { applyReplaceSet, ReplaceSet } from "./text";
+import { applyReplaceSet, ReplaceSet, getAText } from "./text";
 
 const api = require("ep_etherpad-lite/node/db/API");
 const { decode, encode } = require("he");
@@ -62,7 +62,7 @@ function replaceHash(text: string, updates: HashUpdate[]): ReplaceSet[] {
 }
 
 export async function updateHash(padId: string, updates: HashUpdate[]) {
-  const { text } = await api.getText(padId);
+  const { text } = await getAText(padId);
   console.debug(
     logPrefix,
     "Update hash with text",

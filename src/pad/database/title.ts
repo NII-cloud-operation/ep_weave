@@ -3,7 +3,7 @@ import removeMdBase from "remove-markdown";
 import { searchHashes, updateHash } from "./hash";
 import { logPrefix } from "../util/log";
 import { escapeForText } from "../static/js/result";
-import { applyReplaceSet, ReplaceSet } from "./text";
+import { applyReplaceSet, ReplaceSet, getAText } from "./text";
 
 const api = require("ep_etherpad-lite/node/db/API");
 const db = require("ep_etherpad-lite/node/db/DB").db;
@@ -67,7 +67,7 @@ async function updateTitleContent(
   newTitle: string
 ): Promise<TitleUpdateResult> {
   console.info(logPrefix, "Update title", pad.id, oldTitle, newTitle);
-  const { text } = await api.getText(pad.id);
+  const { text } = await getAText(pad.id);
   const replaceSet = replaceTitle(text, oldTitle, newTitle);
   if (replaceSet === null) {
     console.warn(logPrefix, "Title not found in HTML", oldTitle, newTitle);
