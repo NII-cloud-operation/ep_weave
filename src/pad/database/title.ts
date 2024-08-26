@@ -1,9 +1,9 @@
-import HTMLParser, { Node } from "node-html-parser";
 import { SearchEngine, PadType } from "ep_search/setup";
 import removeMdBase from "remove-markdown";
 import { searchHashes, updateHash } from "./hash";
 import { logPrefix } from "../util/log";
 import { escapeForText } from "../static/js/result";
+import { applyReplaceSet, ReplaceSet } from "./text";
 
 const api = require("ep_etherpad-lite/node/db/API");
 const db = require("ep_etherpad-lite/node/db/DB").db;
@@ -43,51 +43,21 @@ export function extractTitle(padData: PadType) {
   return removeMd(lines[0]);
 }
 
-function traverseNodes(node: Node, handler: (node: Node) => void) {
-  handler(node);
-  (node.childNodes || []).forEach((child: Node) => {
-    handler(child);
-    traverseNodes(child, handler);
-  });
-}
-
-function replaceTitle(text: string, oldtitle: string, newtitle: string) {
-  return text.replace(oldtitle, newtitle);
-}
-
-function replaceTitleHtml(
-  html: string,
+function replaceTitle(
+  text: string,
   oldtitle: string,
-  newtitle: string
-): string | null {
-  let html_ = html;
-  const m = html.match(/^\<\!DOCTYPE\s+HTML\>(.+)$/);
-  if (m) {
-    html_ = m[1];
-  }
-  const root = HTMLParser.parse(html_);
-  let replaced = false;
-  traverseNodes(root, (node) => {
-    if (node.nodeType !== 3 /* Node.TEXT_NODE */) {
-      return;
-    }
-    if (replaced) {
-      return;
-    }
-    const decodedText = decode(node.rawText);
-    if (!decodedText.includes(oldtitle)) {
-      return;
-    }
-    replaced = true;
-    const replacedText = replaceTitle(decodedText, oldtitle, newtitle);
-    console.info(logPrefix, "Title replaced", decodedText, replacedText);
-    node.rawText = encode(replacedText);
-  });
-  if (!replaced) {
-    console.warn(logPrefix, "Title not found in HTML", oldtitle, html);
+  newtitle: string,
+  offset: number = 0
+): ReplaceSet | null {
+  const pos = text.indexOf(oldtitle);
+  if (pos === -1) {
     return null;
   }
-  return root.toString();
+  return {
+    start: pos + offset,
+    ndel: oldtitle.length,
+    text: newtitle,
+  };
 }
 
 async function updateTitleContent(
@@ -97,9 +67,9 @@ async function updateTitleContent(
   newTitle: string
 ): Promise<TitleUpdateResult> {
   console.info(logPrefix, "Update title", pad.id, oldTitle, newTitle);
-  const { html } = await api.getHTML(pad.id);
-  const replacedHtml = replaceTitleHtml(html, oldTitle, newTitle);
-  if (replacedHtml === null) {
+  const { text } = await api.getText(pad.id);
+  const replaceSet = replaceTitle(text, oldTitle, newTitle);
+  if (replaceSet === null) {
     console.warn(logPrefix, "Title not found in HTML", oldTitle, newTitle);
     const updates = await searchHashes(searchEngine, oldTitle);
     return {
@@ -110,7 +80,7 @@ async function updateTitleContent(
       },
     };
   }
-  await api.setHTML(pad.id, replacedHtml);
+  await applyReplaceSet(pad.id, [replaceSet]);
 
   const updates = await searchHashes(searchEngine, oldTitle);
   return {

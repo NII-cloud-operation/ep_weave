@@ -1,8 +1,8 @@
-import HTMLParser, { Node } from "node-html-parser";
 import { SearchEngine, PadType } from "ep_search/setup";
 import { tokenize } from "../static/js/parser";
 import { logPrefix } from "../util/log";
 import { getHashQuery } from "../static/js/hash";
+import { applyReplaceSet, ReplaceSet } from "./text";
 
 const api = require("ep_etherpad-lite/node/db/API");
 const { decode, encode } = require("he");
@@ -14,104 +14,78 @@ export type HashUpdate = {
 
 const MAX_PAGES = 10000;
 
-function replaceHashToken(token: string, oldTitle: string, newTitle: string) {
+function replaceHashToken(
+  token: string,
+  oldTitle: string,
+  newTitle: string,
+  offset: number
+): ReplaceSet | null {
   if (token === `#${oldTitle}`) {
-    return `#${newTitle}`;
+    return {
+      start: offset,
+      ndel: oldTitle.length + 1,
+      text: `#${newTitle}`,
+    };
   }
-  return token;
+  return null;
 }
 
-function replaceHashTokens(token: string, updates: HashUpdate[]) {
+function replaceHashTokens(
+  token: string,
+  updates: HashUpdate[],
+  offset: number
+): ReplaceSet | null {
   for (const update of updates) {
     const { oldTitle, newTitle } = update;
-    const replaced = replaceHashToken(token, oldTitle, newTitle);
-    if (replaced !== token) {
+    const replaced = replaceHashToken(token, oldTitle, newTitle, offset);
+    if (replaced !== null) {
       return replaced;
     }
   }
   return null;
 }
 
-function replaceHash(text: string, updates: HashUpdate[]): string | null {
-  let newtext = "";
+function replaceHash(text: string, updates: HashUpdate[]): ReplaceSet[] {
   let remain = text;
-  let replaced = false;
+  let offset = 0;
+  let replaceSet: ReplaceSet[] = [];
   while (remain.length > 0) {
     const token = tokenize(remain);
-    const replacedToken = replaceHashTokens(token, updates);
+    const replacedToken = replaceHashTokens(token, updates, offset);
     if (replacedToken !== null) {
-      newtext += replacedToken;
-      remain = remain.substring(token.length);
-      replaced = true;
-      continue;
+      replaceSet.push(replacedToken);
     }
-    newtext += token;
     remain = remain.substring(token.length);
+    offset += token.length;
   }
-  if (!replaced) {
-    return null;
-  }
-  return newtext;
-}
-
-function traverseNodes(node: Node, handler: (node: Node) => void) {
-  handler(node);
-  (node.childNodes || []).forEach((child: Node) => {
-    handler(child);
-    traverseNodes(child, handler);
-  });
-}
-
-function replaceHashHtml(html: string, updates: HashUpdate[]) {
-  let html_ = html;
-  const m = html.match(/^\<\!DOCTYPE\s+HTML\>(.+)$/);
-  if (m) {
-    html_ = m[1];
-  }
-  const root = HTMLParser.parse(html_);
-  let replaced = false;
-  traverseNodes(root, (node) => {
-    if (node.nodeType !== 3 /* Node.TEXT_NODE */) {
-      return;
-    }
-    const replacedText = replaceHash(decode(node.rawText), updates);
-    if (replacedText === null) {
-      return;
-    }
-    replaced = true;
-    node.rawText = encode(replacedText);
-  });
-  if (!replaced) {
-    return null;
-  }
-  return root.toString();
+  return replaceSet;
 }
 
 export async function updateHash(padId: string, updates: HashUpdate[]) {
-  const { html } = await api.getHTML(padId);
+  const { text } = await api.getText(padId);
   console.debug(
     logPrefix,
     "Update hash with text",
     padId,
     ", src=",
-    html,
+    text,
     ", updates=",
     updates
   );
-  const newhtml = replaceHashHtml(html, updates);
-  if (newhtml === null) {
-    console.warn(logPrefix, "Hash not found in HTML", updates, html);
+  const replaceSet = replaceHash(text, updates);
+  if (replaceSet.length === 0) {
+    console.warn(logPrefix, "Hash not found in HTML", updates, text);
     return padId;
   }
-  await api.setHTML(padId, newhtml);
+  await applyReplaceSet(padId, replaceSet);
   console.debug(
     logPrefix,
     "Update hash with text",
     padId,
     ", src=",
-    html,
+    text,
     ", dest=",
-    newhtml
+    replaceSet
   );
   return padId;
 }
