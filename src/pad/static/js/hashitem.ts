@@ -1,5 +1,6 @@
 import { PadType } from "ep_search/setup";
 import { getColorFromTitle, contrastRatio } from "./color";
+import { getBasePath } from "./util";
 
 function mostReadableColor(backgroundColor: string, colorCandidates: string[]) {
   const contrastRatios = colorCandidates.map((color) =>
@@ -25,9 +26,9 @@ export async function createHashItemView(doc: PadType) {
     "#cccccc",
     "#ffffff",
   ]);
-
+  const basePath = getBasePath();
   const anchor = $("<a></a>")
-    .attr("href", `/p/${value}`)
+    .attr("href", `${basePath}/p/${value}`)
     .css("color", color)
     .text(title);
   const hashLink = $("<div></div>")

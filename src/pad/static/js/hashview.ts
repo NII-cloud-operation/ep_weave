@@ -12,6 +12,7 @@ import { query, escapeForText } from "./result";
 import { createToolbar, createCloseButton } from "./toolbar";
 import { initResizer, windowResized } from "./resizer";
 import { getHashQuery } from "./hash";
+import { getBasePath } from "./util";
 
 type PadRef = {
   id: string;
@@ -47,7 +48,8 @@ function getPadURL() {
   const url = new URL(window.location.href);
   url.search = "";
   url.hash = "";
-  url.pathname = `/t/${encodeURIComponent(ep_weave.title)}`;
+  const basePath = getBasePath();
+  url.pathname = `${basePath}/t/${encodeURIComponent(ep_weave.title)}`;
   return url.toString();
 }
 
@@ -83,10 +85,11 @@ function overrideEmbedCommand(toolbar: AceToolbar) {
 }
 
 function refreshNavbar(navbar: JQuery, title: string) {
+  const basePath = getBasePath();
   navbar.empty();
   navbar.append(
     $("<a>")
-      .attr("href", "/")
+      .attr("href", `${basePath}/`)
       .text("Index")
       .addClass("hashview-path-segment hashview-path-index")
   );
@@ -99,7 +102,7 @@ function refreshNavbar(navbar: JQuery, title: string) {
       $("<a>")
         .addClass("hashview-path-segment")
         .text(segment)
-        .attr("href", `/t/${encodeURIComponent(parentPath)}`)
+        .attr("href", `${basePath}/t/${encodeURIComponent(parentPath)}`)
     );
     navbar.append($("<span>").addClass("hashview-path-separator").text("/"));
   }
@@ -175,8 +178,9 @@ function createMenuItem() {
         return;
       }
       duplicatedPads.forEach((pad) => {
+        const basePath = getBasePath();
         console.debug(logPrefix, "Open pad", pad);
-        window.open(`/p/${pad.id}`, "_blank");
+        window.open(`${basePath}/p/${pad.id}`, "_blank");
       });
     });
   return $("<li></li>")
@@ -332,10 +336,11 @@ async function loadHashView(
   (await Promise.all(hashViews)).forEach((hashView) => {
     container.append(hashView);
   });
+  const basePath = getBasePath();
   const titledPadExists = docs.some((doc) => doc.title === hash.substring(1));
   if (title !== hash.substring(1) && !titledPadExists) {
     const anchor = $("<a></a>")
-      .attr("href", `/t/${hash.substring(1)}`)
+      .attr("href", `${basePath}/t/${hash.substring(1)}`)
       .text(hash.substring(1));
     const createClass = "hash-create";
     const hashLink = $("<div></div>")
@@ -505,7 +510,8 @@ exports.postToolbarInit = (hook: any, context: PostToolbarInit) => {
             title += "/";
           }
           title += query;
-          window.open(`/t/${encodeURIComponent(title)}`, "_blank");
+          const basePath = getBasePath();
+          window.open(`${basePath}/t/${encodeURIComponent(title)}`, "_blank");
         },
       }).prepend($("<div>").text(">").addClass("hashview-toolbar-child-marker"))
     )
@@ -577,9 +583,10 @@ export function aceCreateDomLine(
   if (!hashTitle) {
     throw new Error(`Unexpected error: ${searchHash_}, ${hash}, ${link}`);
   }
+  const basePath = getBasePath();
   return [
     {
-      extraOpenTags: `<a href="/t/${encodeURIComponent(hashTitle)}">`,
+      extraOpenTags: `<a href="${basePath}/t/${encodeURIComponent(hashTitle)}">`,
       extraCloseTags: "</a>",
       cls: modifiedCls,
     },
