@@ -1,3 +1,5 @@
+import { getBasePath } from "./util";
+
 export type Callbacks = {
   onSearch: (query: string) => void;
   onSort: (sort: string) => void;
@@ -82,8 +84,9 @@ function createSearchBox(
     if (typeof query !== "string") {
       return;
     }
+    const basePath = getBasePath();
     if (!onCreate) {
-      window.open(`/t/${encodeURIComponent(query)}`, "_blank");
+      window.open(`${basePath}/t/${encodeURIComponent(query)}`, "_blank");
       return;
     }
     onCreate(query);

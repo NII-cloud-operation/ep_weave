@@ -1,3 +1,6 @@
+ARG ETHERPAD_IMAGE_NAME="etherpad/etherpad"
+ARG ETHERPAD_IMAGE_TAG="2"
+
 FROM mcr.microsoft.com/devcontainers/typescript-node:18 AS build-stage
 
 COPY . /app/ep_weave
@@ -5,14 +8,14 @@ RUN cd /app/ep_weave \
     && ls -la /app/ep_weave \
     && npm i --include dev && npm run build
 
-FROM etherpad/etherpad:2
+FROM ${ETHERPAD_IMAGE_NAME}:${ETHERPAD_IMAGE_TAG}
 
 USER root
 
 COPY --from=build-stage /app/ep_weave /tmp/ep_weave
 
 # ep_search
-RUN git clone -b feature/search-engine-ep2 https://github.com/yacchin1205/ep_search.git /tmp/ep_search \
+RUN git clone -b feature/search-engine https://github.com/NII-cloud-operation/ep_search.git /tmp/ep_search \
     && cd /tmp/ep_search \
     && ls -la /tmp/ep_search \
     && npm pack

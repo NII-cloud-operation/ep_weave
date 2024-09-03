@@ -1,4 +1,5 @@
 import { SearchResponse } from "ep_search/setup";
+import { getBasePath } from "./util";
 
 export function escapeForText(query: string): string {
   let escaped = query;
@@ -34,8 +35,9 @@ export function query(
     if (rows !== undefined) {
       opts.push(`&rows=${rows}`);
     }
+    const basePath = getBasePath();
     $.getJSON(
-      `/search/?query=${encodeURIComponent(query)}${opts.join("")}`,
+      `${basePath}/search/?query=${encodeURIComponent(query)}${opts.join("")}`,
       (data: SearchResponse) => {
         resolve(data);
       }

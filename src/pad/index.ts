@@ -17,6 +17,10 @@ const api = require("ep_etherpad-lite/node/db/API");
 
 let apikey: string | null = null;
 
+type PluginSettings = {
+  basePath?: string;
+};
+
 async function getPadIdsByTitle(searchEngine: SearchEngine, title: string) {
   const results = await searchEngine.search(
     `title:"${escapeForText(title)}"`
@@ -81,6 +85,8 @@ exports.registerRoute = (
   args: ExpressCreateServerArgs,
   cb: (next: any) => void
 ) => {
+  const epWeavePluginSettings = (settings.ep_weave || {}) as PluginSettings;
+  const basePath = epWeavePluginSettings.basePath || "";
   const pluginSettings = settings.ep_search || {};
   const searchEngine = createSearchEngine(pluginSettings);
   const apikeyFilename = absolutePaths.makeAbsolute(
@@ -141,7 +147,7 @@ exports.registerRoute = (
         if (ids === null) {
           createNewPadForTitle(title, req)
             .then((id) => {
-              res.redirect(`/p/${id}`);
+              res.redirect(`${basePath}/p/${id}`);
             })
             .catch((err) => {
               console.error(
@@ -155,7 +161,7 @@ exports.registerRoute = (
             });
           return;
         }
-        res.redirect(`/p/${ids[0]}`);
+        res.redirect(`${basePath}/p/${ids[0]}`);
       })
       .catch((err) => {
         console.error(
