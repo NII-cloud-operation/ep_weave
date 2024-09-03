@@ -132,6 +132,7 @@ function getCurrentSort() {
 }
 
 function createMenuItem() {
+  const basePath = getBasePath();
   const changeTitleButton = $("<button></button>")
     .addClass("hashview-change-title btn")
     .on("click", () => {
@@ -139,7 +140,7 @@ function createMenuItem() {
         return;
       }
       $.ajax({
-        url: `/ep_weave/hashes?${new URLSearchParams({
+        url: `${basePath}/ep_weave/hashes?${new URLSearchParams({
           oldtitle: changedTitle.oldtitle,
           newtitle: changedTitle.newtitle,
         })}`,
