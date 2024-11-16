@@ -20,6 +20,10 @@ jobs:
         with:
           packages: libreoffice libreoffice-pdfimport
           version: 1.0
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          path: ep_weave
       -
         name: Install etherpad core
         uses: actions/checkout@v3
@@ -80,6 +84,12 @@ jobs:
         working-directory: ./plugin
         run: |
           pnpm link --global ep_etherpad-lite
+      - name: Install ep_weave
+        working-directory: ./ep_weave
+        run: |
+          pwd
+          ls -la
+          pnpm run plugins i --path .
       -
         name: Run the backend tests
         working-directory: ./etherpad-lite
