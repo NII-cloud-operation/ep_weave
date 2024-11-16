@@ -14,17 +14,18 @@ const argv = require("ep_etherpad-lite/node/utils/Cli").argv;
 const { v4: uuidv4 } = require("uuid");
 const settings = require("ep_etherpad-lite/node/utils/Settings");
 const api = require("ep_etherpad-lite/node/db/API");
+const db = require("ep_etherpad-lite/node/db/DB").db;
+const importEtherpad = require("ep_etherpad-lite/node/utils/ImportEtherpad");
 
 let apikey: string | null = null;
 
 type PluginSettings = {
   basePath?: string;
+  initialPadsPath?: string;
 };
 
 async function getPadIdsByTitle(searchEngine: SearchEngine, title: string) {
-  const results = await searchEngine.search(
-    `title:"${escapeForText(title)}"`
-  );
+  const results = await searchEngine.search(`title:"${escapeForText(title)}"`);
   console.debug(logPrefix, `Search by title ${title}`, results);
   if (!results) {
     return null;
@@ -86,6 +87,63 @@ exports.registerRoute = (
   cb: (next: any) => void
 ) => {
   const epWeavePluginSettings = (settings.ep_weave || {}) as PluginSettings;
+  initializePads(epWeavePluginSettings)
+    .then(() => {
+      performRegisterRoute(epWeavePluginSettings, hookName, args, cb);
+    })
+    .catch((err) => {
+      console.error(
+        logPrefix,
+        "Error occurred",
+        err.stack || err.message || String(err)
+      );
+    });
+};
+
+async function initializePads(epWeavePluginSettings: PluginSettings) {
+  const { initialPadsPath } = epWeavePluginSettings;
+  if (!initialPadsPath) {
+    return;
+  }
+  const pads = await db.findKeys("pad:*", "*:*:*");
+  if (pads.length > 0) {
+    console.debug(logPrefix, "Pads already exist in the database");
+    return;
+  }
+  console.info(logPrefix, "Initialize pads from", initialPadsPath);
+  if (!fs.existsSync(initialPadsPath)) {
+    console.warn(logPrefix, "Directory not found", initialPadsPath);
+    return;
+  }
+  // initialPadsPath is a directory path that contains pad `.etherpad` files.
+  // Each file contains pad information in JSON format.
+  const files = fs.readdirSync(initialPadsPath);
+  for (const file of files) {
+    if (!file.toLowerCase().endsWith(".etherpad")) {
+      continue;
+    }
+    const padPath = `${initialPadsPath}/${file}`;
+    console.info(logPrefix, "Read pad information from", padPath);
+    const padRaw = fs.readFileSync(padPath, "utf8");
+    try {
+      const padID = uuidv4();
+      await importEtherpad.setPadRaw(padID, padRaw);
+    } catch (e: any) {
+      console.warn(
+        logPrefix,
+        "An error occurred during initialization. Ignoring.",
+        e.stack || e.message || e
+      );
+    }
+  }
+}
+
+function performRegisterRoute(
+  epWeavePluginSettings: PluginSettings,
+  hookName: any,
+  args: ExpressCreateServerArgs,
+  cb: (next: any) => void
+) {
   const basePath = epWeavePluginSettings.basePath || "";
   const pluginSettings = settings.ep_search || {};
   const searchEngine = createSearchEngine(pluginSettings);
@@ -205,4 +263,4 @@ exports.registerRoute = (
       });
   });
   cb(null);
-};
+}

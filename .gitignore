@@ -4,6 +4,7 @@ node_modules/
 docker-compose.override.yml
 demo/local.json
 demo/APIKEY.txt
+demo/pads.d
 
 .DS_Store
 ep_weave-*.tgz

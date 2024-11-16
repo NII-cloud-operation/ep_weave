@@ -18,4 +18,16 @@ docker compose build
 docker compose up -d
 ```
 
+# Configuration
 
+You can configure the following settings in settings.json.
+
+```
+  "ep_weave": {
+    "basePath": "/ep_weave",
+    "initialPadsPath": "/pads.d"
+  }
+```
+
+- basePath: The base path of the etherpad. The default is "". If you deploy Etherpad to a subdirectory, set the subdirectory path.
+- initialPadsPath: The path to the initial pads. The default is "". When a path is set, the plugin will create an initial pad from the files in the directory specified by this path when the server is initialized. The file must be a JSON file with the `.etherpad` extension that has been exported from Etherpad.
