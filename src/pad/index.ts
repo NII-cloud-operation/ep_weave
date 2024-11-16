@@ -14,6 +14,7 @@ const argv = require("ep_etherpad-lite/node/utils/Cli").argv;
 const { v4: uuidv4 } = require("uuid");
 const settings = require("ep_etherpad-lite/node/utils/Settings");
 const api = require("ep_etherpad-lite/node/db/API");
+const authorManager = require("ep_etherpad-lite/node/db/AuthorManager");
 const db = require("ep_etherpad-lite/node/db/DB").db;
 const importEtherpad = require("ep_etherpad-lite/node/utils/ImportEtherpad");
 
@@ -48,13 +49,26 @@ async function createNewPadForTitle(
     query: {
       body?: string;
     };
-  }
+  },
+  user: any
 ) {
-  console.info(logPrefix, "Create pad", title);
+  const authorId = await getAuthorForUser(user);
+  console.info(logPrefix, "Create pad", title, user, authorId);
   const padId = uuidv4();
   const body = req.query.body || "";
-  await api.createPad(padId, `${title}\n\n${body}`);
+  await api.createPad(padId, `${title}\n\n${body}`, authorId || "");
   return padId;
+}
+
+async function getAuthorForUser(user: any) {
+  if (!user) {
+    return "";
+  }
+  if (!user.username) {
+    return "";
+  }
+  const token = `username=${user.username}`;
+  return await authorManager.getAuthorId(token, user);
 }
 
 exports.preAuthorize = (
@@ -199,11 +213,12 @@ function performRegisterRoute(
   const { app } = args;
   app.get("/ep_weave/api/search", apikeyChecker, searchHandler);
   app.get("/t/:title(*)", (req, res) => {
+    const { user } = (req as any).session;
     const { title } = req.params;
     getPadIdsByTitle(searchEngine, title)
       .then((ids) => {
         if (ids === null) {
-          createNewPadForTitle(title, req)
+          createNewPadForTitle(title, req, user)
             .then((id) => {
               res.redirect(`${basePath}/p/${id}`);
             })
