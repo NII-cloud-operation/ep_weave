@@ -14,6 +14,8 @@ jobs:
     name: with Plugins
     runs-on: ubuntu-latest
     steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
       -
         name: Install libreoffice
         uses: awalsh128/cache-apt-pkgs-action@v1.4.2
@@ -65,6 +67,16 @@ jobs:
         name: Install Etherpad core dependencies
         working-directory: ./etherpad-lite
         run: bin/installDeps.sh
+      - name: Build plugin
+        working-directory: ./plugin
+        run: |
+          npm i --include dev
+          npm run build
+          ls -la .
+      - name: Build Solr
+        working-directory: ./plugin
+        run: |
+          docker buildx build -o type=docker -t ep_weave/solr -f ./solr/Dockerfile .
       - name: Link plugin to etherpad-lite
         working-directory: ./etherpad-lite
         run: |
@@ -72,6 +84,17 @@ jobs:
           pnpm run plugins i --path  ../../plugin
         env:
           PLUGIN_NAME: ${{ steps.plugin_name.outputs.plugin_name }}
+      - name: Prepare ep_search
+        working-directory: ./etherpad-lite
+        run: |
+          git clone -b feature/search-engine https://github.com/NII-cloud-operation/ep_search.git /tmp/ep_search
+          cd /tmp/ep_search
+          ls -la /tmp/ep_search
+          npm pack
+      - name: Install ep_search
+        working-directory: ./etherpad-lite
+        run: |
+          pnpm run plugins i --path /tmp/ep_search
       - name: Link ep_etherpad-lite
         working-directory: ./etherpad-lite/src
         run: |
@@ -84,9 +107,34 @@ jobs:
         name: Run the backend tests
         working-directory: ./etherpad-lite
         run: |
-          res=$(find .. -path "./node_modules/ep_*/static/tests/backend/specs/**" | wc -l)
-          if [ $res -eq 0 ]; then
-          echo "No backend tests found"
-          else
-          pnpm run test
-          fi
+          docker run -d --name etherpad-solr -p 8983:8983 ep_weave/solr
+          MAX_ATTEMPTS=60
+          counter=0
+          while ! nc -z localhost 8983; do
+            echo "Waiting for Solr to start ${counter}/${MAX_ATTEMPTS}"
+            counter=$((counter+1))
+            if [ "$counter" -ge "$MAX_ATTEMPTS" ]; then
+              echo "Solr did not start"
+              exit 1
+            fi
+            sleep 0.5
+          done
+          counter=0
+          while ! curl http://localhost:8983/solr/pad/admin/ping | grep '"status":"OK"'; do
+            echo "Waiting for Solr to respond ${counter}/${MAX_ATTEMPTS}"
+            counter=$((counter+1))
+            if [ "$counter" -ge "$MAX_ATTEMPTS" ]; then
+              echo "Solr did not respond"
+              exit 1
+            fi
+            sleep 0.5
+          done
+          pnpm run test --settings ../plugin/tests/settings.json
+        env:
+          LOGLEVEL: DEBUG
+      - name: Stop Solr
+        if: always()
+        run: |
+          docker logs etherpad-solr
+          docker stop etherpad-solr
+          docker rm etherpad-solr
