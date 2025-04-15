@@ -20,10 +20,16 @@ RUN git clone -b feature/search-engine https://github.com/NII-cloud-operation/ep
     && ls -la /tmp/ep_search \
     && npm pack
 
+# ep_webrtc
+RUN git clone -b feature/sfu https://github.com/NII-cloud-operation/ep_webrtc.git /tmp/ep_webrtc \
+    && cd /tmp/ep_webrtc \
+    && ls -la /tmp/ep_webrtc \
+    && npm pack
+
 USER etherpad
 
 ARG ETHERPAD_PLUGINS="ep_align ep_markdown ep_embedded_hyperlinks2 ep_font_color ep_headings2  ep_image_upload"
-ARG ETHERPAD_LOCAL_PLUGINS="/tmp/ep_weave/ /tmp/ep_search/"
+ARG ETHERPAD_LOCAL_PLUGINS="/tmp/ep_weave/ /tmp/ep_search/ /tmp/ep_webrtc/"
 RUN bin/installDeps.sh && rm -rf ~/.npm && \
     if [ ! -z "${ETHERPAD_PLUGINS}" ]; then \
         pnpm run plugins i ${ETHERPAD_PLUGINS}; \
