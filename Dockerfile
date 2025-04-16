@@ -39,4 +39,4 @@ RUN bin/installDeps.sh && rm -rf ~/.npm && \
     fi
 
 # If you don't want to use the OpenID Connect plugin, you can comment out the following line.
-RUN pnpm run plugins i ep_openid_connect ep_user_displayname ep_stable_authorid
+RUN pnpm run plugins i ep_openid_connect@3.0.7 ep_user_displayname ep_stable_authorid
