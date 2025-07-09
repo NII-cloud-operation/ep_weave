@@ -5,6 +5,7 @@
       "hooks": {
         "expressCreateServer" : "ep_weave/lib/index:registerRoute",
         "preAuthorize": "ep_weave/lib/index",
+        "clientVars": "ep_weave/lib/index",
         "eejsBlock_styles": "ep_weave/lib/client",
         "eejsBlock_indexWrapper": "ep_weave/lib/client",
         "eejsBlock_indexCustomScripts": "ep_weave/lib/client"

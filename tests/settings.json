@@ -653,6 +653,9 @@
       "port": "8983",
       "core": "pad",
       "padSerializer": "ep_weave/lib/serializer"
+    },
+    "ep_weave": {
+      "toggleRollupKey": "Ctrl+Shift+R"
     }
   }
   

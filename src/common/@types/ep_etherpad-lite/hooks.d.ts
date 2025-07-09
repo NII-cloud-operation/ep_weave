@@ -14,7 +14,13 @@ declare module "ep_etherpad-lite/hooks" {
   };
 
   export type ClientVars = {
-    ep_weave: {};
+    ep_weave: {
+      toggleRollupKey?: string;
+      title?: string;
+      oldTitle?: string;
+      titleChangedChecked?: any;
+      titleDuplicatedChecked?: any;
+    };
   };
 
   export type EejsBlockContext = {

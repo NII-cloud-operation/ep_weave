@@ -12,7 +12,7 @@ import { query, escapeForText } from "./result";
 import { createToolbar, createCloseButton } from "./toolbar";
 import { initResizer, windowResized } from "./resizer";
 import { getHashQuery } from "./hash";
-import { getBasePath } from "./util";
+import { getBasePath, parseKeyCombination, matchesKeyEvent } from "./util";
 
 type PadRef = {
   id: string;
@@ -84,6 +84,47 @@ function overrideEmbedCommand(toolbar: AceToolbar) {
   });
 }
 
+function toggleHashView() {
+  const collapsed = $(".hashview-collapsed");
+  if (collapsed.length === 0) {
+    $(".hashview")
+      .addClass("hashview-collapsed")
+      .removeClass("hashview-expanded");
+  } else {
+    $(".hashview")
+      .removeClass("hashview-collapsed")
+      .addClass("hashview-expanded");
+  }
+  setTimeout(() => {
+    windowResized();
+  }, 100);
+}
+
+function handleKeyboardShortcut(event: KeyboardEvent, source: string): boolean {
+  try {
+    const toggleRollupKey = clientVars.ep_weave && clientVars.ep_weave.toggleRollupKey;
+    
+    // If toggleRollupKey is not set or empty, disable keyboard shortcuts
+    if (!toggleRollupKey || toggleRollupKey.trim() === "") {
+      return false;
+    }
+    
+    const keyCombination = parseKeyCombination(toggleRollupKey);
+    
+    if (matchesKeyEvent(event, keyCombination)) {
+      event.preventDefault();
+      event.stopPropagation();
+      toggleHashView();
+      console.debug(logPrefix, `Keyboard shortcut triggered (${source}):`, toggleRollupKey);
+      return true; // Event handled
+    }
+  } catch (error) {
+    console.error(logPrefix, "Error parsing key combination:", error);
+  }
+  
+  return false; // Event not handled
+}
+
 function refreshNavbar(navbar: JQuery, title: string) {
   const basePath = getBasePath();
   navbar.empty();
@@ -111,19 +152,7 @@ function refreshNavbar(navbar: JQuery, title: string) {
       .addClass("hashview-path-segment")
       .text(pathSegments[pathSegments.length - 1])
   );
-  navbar.append(
-    createCloseButton(() => {
-      const collapsed = $(".hashview-collapsed");
-      if (collapsed.length === 0) {
-        $(".hashview")
-          .addClass("hashview-collapsed")
-          .removeClass("hashview-expanded");
-      }
-      setTimeout(() => {
-        windowResized();
-      }, 100);
-    })
-  );
+  navbar.append(createCloseButton(toggleHashView));
 }
 
 function getCurrentSort() {
@@ -412,12 +441,36 @@ exports.postAceInit = (hook: any, context: PostAceInitContext) => {
   const text = ace.exportText();
   const { title } = parse(text || "");
   clientVars.ep_weave = {
+    ...clientVars.ep_weave,
     title,
     oldTitle: title,
   };
   updateTitle(title);
   checkTitleDuplicated(title, clientVars);
   addBeforeUnloadListener();
+  
+  // Add keyboard shortcut handler using ACE's setOnKeyDown
+  if (ace.setOnKeyDown) {
+    ace.setOnKeyDown((event: KeyboardEvent) => {
+      return handleKeyboardShortcut(event, "setOnKeyDown");
+    });
+  } else {
+    console.warn(logPrefix, "ACE setOnKeyDown not found, keyboard shortcuts may not work properly");
+  }
+  
+  // Add document-level keyboard shortcut handler for when ACE is not focused
+  document.addEventListener("keydown", (event: KeyboardEvent) => {
+    // Only handle if ACE editor is not focused
+    const activeElement = document.activeElement;
+    const isAceEditor = activeElement && (
+      activeElement.classList.contains("ace_text-input") || 
+      activeElement.closest(".ace_editor")
+    );
+    
+    if (!isAceEditor) {
+      handleKeyboardShortcut(event, "document");
+    }
+  });
 };
 
 exports.aceEditEvent = (hook: string, context: AceEditEventContext) => {
@@ -519,15 +572,9 @@ exports.postToolbarInit = (hook: any, context: PostToolbarInit) => {
     .append(result)
     .on("click", () => {
       const collapsed = $(".hashview-collapsed");
-      if (collapsed.length === 0) {
-        return;
+      if (collapsed.length > 0) {
+        toggleHashView();
       }
-      $(".hashview")
-        .removeClass("hashview-collapsed")
-        .addClass("hashview-expanded");
-      setTimeout(() => {
-        windowResized();
-      }, 100);
     })
     .appendTo($editorcontainerbox);
   const { toolbar } = context;
@@ -593,3 +640,5 @@ export function aceCreateDomLine(
     },
   ];
 }
+
+
