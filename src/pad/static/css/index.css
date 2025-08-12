@@ -1,3 +1,7 @@
+#wrapper {
+    max-width: none !important;
+}
+
 #inner {
     display: none;
 }
