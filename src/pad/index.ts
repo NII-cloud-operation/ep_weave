@@ -303,9 +303,10 @@ function performRegisterRoute(
   };
 
   app.get("/ep_weave/notebook-search", notebookSearchHandler);
-  app.get("/t/:title(*)", (req, res) => {
+  // Use regex directly for version compatibility
+  app.get(/^\/t\/(.*)/, (req: Request, res: Response) => {
     const { user } = (req as any).session;
-    const { title } = req.params;
+    const title = req.params[0] || '';
     getPadIdsByTitle(searchEngine, title)
       .then((ids) => {
         if (ids === null) {
