@@ -24,6 +24,13 @@ type PluginSettings = {
   basePath?: string;
   initialPadsPath?: string;
   toggleRollupKey?: string;
+  notebookSearch?: {
+    baseUrl: string;
+    core?: string;
+    username?: string;
+    password?: string;
+    jupyterBaseUrl?: string;
+  };
 };
 
 async function getPadIdsByTitle(searchEngine: SearchEngine, title: string) {
@@ -81,6 +88,8 @@ exports.clientVars = (
   return callback({
     ep_weave: {
       toggleRollupKey: epWeaveSettings.toggleRollupKey || "ctrl+shift+r",
+      notebookSearchEnabled: !!epWeaveSettings.notebookSearch,
+      jupyterBaseUrl: epWeaveSettings.notebookSearch?.jupyterBaseUrl,
     },
   });
 };
@@ -226,6 +235,74 @@ function performRegisterRoute(
   };
   const { app } = args;
   app.get("/ep_weave/api/search", apikeyChecker, searchHandler);
+
+  // Notebook search endpoint for searching in Jupyter notebook headings
+  const notebookSearchHandler = async (req: Request, res: Response) => {
+    const notebookSearchConfig = epWeavePluginSettings.notebookSearch;
+    if (!notebookSearchConfig) {
+      // Return 404 if notebook search is not configured
+      res.status(404).send("Not Found");
+      return;
+    }
+
+    const searchString = req.query.query || req.query.q;
+    if (typeof searchString !== "string") {
+      res.status(400).send({
+        error: "Bad Request",
+      });
+      return;
+    }
+
+    try {
+      console.debug(logPrefix, "Notebook search request:", {
+        query: searchString,
+        config: {
+          baseUrl: notebookSearchConfig.baseUrl,
+          core: notebookSearchConfig.core,
+          hasAuth: !!(notebookSearchConfig.username && notebookSearchConfig.password),
+        },
+      });
+
+      const { createClient } = require("./solr-client");
+      const client = createClient(notebookSearchConfig);
+
+      if (notebookSearchConfig.username && notebookSearchConfig.password) {
+        client.basicAuth(notebookSearchConfig.username, notebookSearchConfig.password);
+      }
+
+      // Search in source__markdown__heading field
+      const start = parseInt(req.query.start as string) || 0;
+      const rows = parseInt(req.query.limit as string) || 10;
+      const sort = req.query.sort as string || "notebook_mtime desc";
+
+      const searchQuery = {
+        q: `source__markdown__heading:"${searchString}"`,
+        start,
+        rows,
+        sort,
+      };
+
+      console.debug(logPrefix, "Executing Solr search with query:", searchQuery);
+
+      const result = await client.search(searchQuery);
+
+      console.debug(logPrefix, "Notebook search successful, found:", result.response.numFound, "documents");
+
+      res.send(JSON.stringify(result.response));
+    } catch (err: any) {
+      console.error(logPrefix, "Notebook search error:", {
+        message: err.message,
+        stack: err.stack,
+        searchString,
+      });
+      res.status(500).send({
+        error: "Search failed",
+        message: err.message,
+      });
+    }
+  };
+
+  app.get("/ep_weave/notebook-search", notebookSearchHandler);
   app.get("/t/:title(*)", (req, res) => {
     const { user } = (req as any).session;
     const { title } = req.params;
