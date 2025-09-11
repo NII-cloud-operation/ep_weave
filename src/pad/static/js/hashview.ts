@@ -436,10 +436,10 @@ async function loadCellsHashView(
           let solrQuery;
           if (doc.lc_cell_meme__current) {
             // Use cell ID if available
-            solrQuery = `q.op=AND&q=lc_cell_memes:${doc.lc_cell_meme__current}&start=0&rows=50&sort=mtime desc`;
+            solrQuery = `lc_cell_memes:${doc.lc_cell_meme__current}`;
           } else if (doc.source__markdown__heading) {
             // Fallback to heading search
-            solrQuery = `q.op=AND&q=source__markdown__heading:"${encodeURIComponent(doc.source__markdown__heading)}"&start=0&rows=50&sort=mtime desc`;
+            solrQuery = `source__markdown__heading:"${doc.source__markdown__heading}"`;
           } else {
             // No specific search criteria available
             console.warn(logPrefix, "No cell ID or heading available for notebook link:", doc.notebook_filename);
@@ -485,7 +485,7 @@ async function loadCellsHashView(
         const metadata = $("<div>").addClass("hash-metadata");
         if (doc.notebook_owner && jupyterBaseUrl) {
           // Create clickable owner link
-          const ownerSolrQuery = `q.op=AND&q=owner:${doc.notebook_owner}&start=0&rows=50&sort=mtime desc`;
+          const ownerSolrQuery = `owner:${doc.notebook_owner}`;
           const ownerParams = new URLSearchParams({
             limit: "50",
             size: "0",
