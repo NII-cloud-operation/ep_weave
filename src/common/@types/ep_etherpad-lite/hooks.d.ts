@@ -16,6 +16,8 @@ declare module "ep_etherpad-lite/hooks" {
   export type ClientVars = {
     ep_weave: {
       toggleRollupKey?: string;
+      notebookSearchEnabled?: boolean;
+      jupyterBaseUrl?: string;
       title?: string;
       oldTitle?: string;
       titleChangedChecked?: any;

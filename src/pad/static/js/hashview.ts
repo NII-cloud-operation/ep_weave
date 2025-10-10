@@ -21,6 +21,7 @@ type PadRef = {
 type RelatedHash = {
   displayName: string;
   hash: string;
+  type?: 'pads' | 'cells';
 };
 
 const logPrefix = "[ep_weave/hashview]";
@@ -34,6 +35,7 @@ const ACE_EDITOR_MODIFIER_PATTERN = /(^| )searchHash:(\S+)/g;
 const ACE_EDITOR_CLASS = "hashview-editor-link";
 const MAX_OPEN_DUPLICATED_PADS = 3;
 const LIMIT_HASH_VIEW_ITEMS = 60;
+const LIMIT_CELLS_VIEW_ITEMS = 10;
 
 function updateTitle(title: string) {
   document.title = `${title} | EP\u{1F9F6}\u{1FAA1}`;
@@ -103,14 +105,14 @@ function toggleHashView() {
 function handleKeyboardShortcut(event: KeyboardEvent, source: string): boolean {
   try {
     const toggleRollupKey = clientVars.ep_weave && clientVars.ep_weave.toggleRollupKey;
-    
+
     // If toggleRollupKey is not set or empty, disable keyboard shortcuts
     if (!toggleRollupKey || toggleRollupKey.trim() === "") {
       return false;
     }
-    
+
     const keyCombination = parseKeyCombination(toggleRollupKey);
-    
+
     if (matchesKeyEvent(event, keyCombination)) {
       event.preventDefault();
       event.stopPropagation();
@@ -121,7 +123,7 @@ function handleKeyboardShortcut(event: KeyboardEvent, source: string): boolean {
   } catch (error) {
     console.error(logPrefix, "Error parsing key combination:", error);
   }
-  
+
   return false; // Event not handled
 }
 
@@ -332,7 +334,7 @@ async function loadChildPads(
   return !empty;
 }
 
-async function loadHashView(
+async function loadPadsHashView(
   title: string,
   hash: string,
   additionalQuery: string | null,
@@ -385,6 +387,146 @@ async function loadHashView(
   return !empty;
 }
 
+async function loadCellsHashView(
+  title: string,
+  hash: string,
+  additionalQuery: string | null,
+  limit: number,
+  sort: string | undefined,
+  container: JQuery
+): Promise<void> {
+  const basePath = getBasePath();
+  const keyword = hash.substring(1); // Remove # prefix
+
+  // Translate pad sort fields to notebook sort fields
+  let notebookSort = sort;
+  if (sort) {
+    const sortParts = sort.split(' ');
+    const field = sortParts[0];
+    const order = sortParts[1] || 'desc';
+
+    const fieldMap: { [key: string]: string } = {
+      'indexed': 'notebook_mtime',
+      'title': 'notebook_filename',
+    };
+
+    const mappedField = fieldMap[field] || field;
+    notebookSort = `${mappedField} ${order}`;
+  }
+
+  try {
+    let url = `${basePath}/ep_weave/notebook-search?query=${encodeURIComponent(keyword)}`;
+    if (notebookSort) {
+      url += `&sort=${encodeURIComponent(notebookSort)}`;
+    }
+    if (limit) {
+      url += `&limit=${limit}`;
+    }
+
+    const response = await $.getJSON(url);
+
+    if (response.docs && response.docs.length > 0) {
+      response.docs.forEach((doc: any) => {
+        const notebookItem = $("<div>").addClass("hash-link notebook-item");
+
+        // Generate link to notebook with nbsearch
+        let notebookUrl = "#";
+        const jupyterBaseUrl = clientVars.ep_weave?.jupyterBaseUrl;
+        if (jupyterBaseUrl) {
+          let solrQuery;
+          if (doc.lc_cell_meme__current) {
+            // Use cell ID if available
+            solrQuery = `lc_cell_memes:${doc.lc_cell_meme__current}`;
+          } else if (doc.source__markdown__heading) {
+            // Fallback to heading search
+            solrQuery = `source__markdown__heading:"${doc.source__markdown__heading}"`;
+          } else {
+            // No specific search criteria available
+            console.warn(logPrefix, "No cell ID or heading available for notebook link:", doc.notebook_filename);
+            solrQuery = null;
+          }
+
+          if (solrQuery) {
+            const params = new URLSearchParams({
+              limit: "50",
+              size: "0",
+              start: "0",
+              numFound: "0",
+              sort: "mtime desc",
+              solrquery: solrQuery,
+              error: "",
+              nbsearch: "yes"
+            });
+            notebookUrl = `${jupyterBaseUrl}?${params.toString()}`;
+          }
+        }
+
+        // Extract filename from path
+        const filename = doc.notebook_filename.split('/').pop() || doc.notebook_filename;
+
+        const notebookLink = $("<a>")
+          .attr("href", notebookUrl)
+          .attr("target", "_blank")
+          .attr("title", filename) // Add tooltip with full filename
+          .text(filename);
+
+        const notebookTitle = $("<div>").addClass("hash-title notebook-title").append(notebookLink);
+        notebookItem.append(notebookTitle);
+
+        // Add heading content if available
+        if (doc.source__markdown__heading) {
+          const headingText = $("<div>")
+            .addClass("hash-shorttext")
+            .text(doc.source__markdown__heading);
+          notebookItem.append(headingText);
+        }
+
+        // Add metadata (owner, cell index, modification time)
+        const metadata = $("<div>").addClass("hash-metadata");
+        if (doc.notebook_owner && jupyterBaseUrl) {
+          // Create clickable owner link
+          const ownerSolrQuery = `owner:${doc.notebook_owner}`;
+          const ownerParams = new URLSearchParams({
+            limit: "50",
+            size: "0",
+            start: "0",
+            numFound: "0",
+            sort: "mtime desc",
+            solrquery: ownerSolrQuery,
+            error: "",
+            nbsearch: "yes"
+          });
+          const ownerUrl = `${jupyterBaseUrl}?${ownerParams.toString()}`;
+          const ownerLink = $("<a>")
+            .attr("href", ownerUrl)
+            .attr("target", "_blank")
+            .text(`@${doc.notebook_owner}`);
+          metadata.append(ownerLink);
+        } else if (doc.notebook_owner) {
+          metadata.append($("<span>").text(`@${doc.notebook_owner}`));
+        }
+        if (doc.index !== undefined) {
+          metadata.append($("<span>").text(` · Cell #${doc.index}`));
+        }
+        if (doc.notebook_mtime) {
+          const date = new Date(doc.notebook_mtime);
+          metadata.append($("<span>").text(` · ${date.toLocaleDateString()}`));
+        }
+        if (metadata.children().length > 0) {
+          notebookItem.append(metadata);
+        }
+
+        container.append(notebookItem);
+      });
+    } else {
+      container.append($("<div>").text("No notebooks found"));
+    }
+  } catch (err) {
+    console.error(logPrefix, "Error loading notebook results:", err);
+    container.append($("<div>").text("Error loading notebook results"));
+  }
+}
+
 function reloadHashView(
   title: string,
   hashes: RelatedHash[],
@@ -403,18 +545,30 @@ function reloadHashView(
     childContainer
   );
 
-  const tasks = (hashes || []).map(({ displayName, hash }) => {
+  const tasks = (hashes || []).map(({ displayName, hash, type }) => {
     root.append($("<div></div>").text(displayName).addClass("hash-text"));
     const container = $("<div></div>").addClass("hash-container");
     root.append(container);
-    return loadHashView(
-      title,
-      hash,
-      additionalQuery,
-      LIMIT_HASH_VIEW_ITEMS,
-      sort || undefined,
-      container
-    );
+
+    if (type === 'cells') {
+      return loadCellsHashView(
+        title,
+        hash,
+        additionalQuery,
+        LIMIT_CELLS_VIEW_ITEMS,
+        sort || undefined,
+        container
+      );
+    } else {
+      return loadPadsHashView(
+        title,
+        hash,
+        additionalQuery,
+        LIMIT_HASH_VIEW_ITEMS,
+        sort || undefined,
+        container
+      );
+    }
   });
   Promise.all(tasks).then(() => {});
 }
@@ -448,7 +602,7 @@ exports.postAceInit = (hook: any, context: PostAceInitContext) => {
   updateTitle(title);
   checkTitleDuplicated(title, clientVars);
   addBeforeUnloadListener();
-  
+
   // Add keyboard shortcut handler using ACE's setOnKeyDown
   if (ace.setOnKeyDown) {
     ace.setOnKeyDown((event: KeyboardEvent) => {
@@ -457,16 +611,16 @@ exports.postAceInit = (hook: any, context: PostAceInitContext) => {
   } else {
     console.warn(logPrefix, "ACE setOnKeyDown not found, keyboard shortcuts may not work properly");
   }
-  
+
   // Add document-level keyboard shortcut handler for when ACE is not focused
   document.addEventListener("keydown", (event: KeyboardEvent) => {
     // Only handle if ACE editor is not focused
     const activeElement = document.activeElement;
     const isAceEditor = activeElement && (
-      activeElement.classList.contains("ace_text-input") || 
+      activeElement.classList.contains("ace_text-input") ||
       activeElement.closest(".ace_editor")
     );
-    
+
     if (!isAceEditor) {
       handleKeyboardShortcut(event, "document");
     }
@@ -489,12 +643,27 @@ exports.aceEditEvent = (hook: string, context: AceEditEventContext) => {
   }));
   if (title || myPad) {
     const myHash = `#${title || myPad?.id}`;
-    relatedHashes = [
+    let hashItems: RelatedHash[] = [
       {
         displayName: "Pages referring to this page",
         hash: myHash,
+        type: 'pads' as const,
       },
-    ].concat(relatedHashes.filter(({ hash }) => hash !== myHash));
+    ];
+
+    relatedHashes = hashItems.concat(
+      relatedHashes.filter(({ hash }) => hash !== myHash)
+    );
+
+    // Only add notebook search if enabled
+    if (ep_weave.notebookSearchEnabled) {
+      const notebookItems = hashes.map((hash) => ({
+        displayName: `Notebooks with '${hash}' in headings`,
+        hash,
+        type: 'cells' as const,
+      }));
+      relatedHashes = relatedHashes.concat(notebookItems);
+    }
   }
   if (ep_weave.title !== title && title.length > 0) {
     console.debug(logPrefix, "Title changed", ep_weave.title, title);

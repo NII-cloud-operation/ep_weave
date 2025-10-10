@@ -1,5 +1,5 @@
 ARG ETHERPAD_IMAGE_NAME="etherpad/etherpad"
-ARG ETHERPAD_IMAGE_TAG="2"
+ARG ETHERPAD_IMAGE_TAG="2.4"
 
 FROM mcr.microsoft.com/devcontainers/typescript-node:18 AS build-stage
 

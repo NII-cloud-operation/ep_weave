@@ -10,6 +10,20 @@
     display: none;
 }
 
+.hash-title.notebook-title a {
+    /* Override default hash-title styles - use line clamping */
+    display: -webkit-box;
+    line-clamp: 2;
+    -webkit-line-clamp: 2; /* Limit to 2 lines */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: normal;
+    overflow-wrap: break-all;
+    word-wrap: break-all; /* Legacy support */
+    word-break: break-all;
+}
+
 .hashview {
     background-color: white;
     position: absolute;
