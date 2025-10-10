@@ -1,0 +1,85 @@
+name: E2E Tests
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+  workflow_dispatch:
+
+jobs:
+  notebook-e2e:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('tests/e2e/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install Python dependencies
+        run: |
+          set -euxo pipefail
+          pip install --upgrade pip
+          pip install -r tests/e2e/requirements.txt
+
+      - name: Install Playwright browsers
+        run: |
+          set -euxo pipefail
+          python -m playwright install --with-deps
+
+      - name: Build Docker images
+        run: |
+          set -euxo pipefail
+          docker compose build etherpad
+
+      - name: Start services
+        run: |
+          set -euxo pipefail
+          docker compose up -d
+
+      - name: Wait for services
+        run: |
+          set -euxo pipefail
+          tests/e2e/scripts/wait-for-services.sh
+
+      - name: Run notebook E2E tests
+        env:
+          E2E_TRANSITION_TIMEOUT: '30000'
+        run: |
+          set -euxo pipefail
+          python tests/e2e/run_notebooks.py
+
+      - name: Gather Docker logs
+        if: always()
+        run: |
+          set -euxo pipefail
+          mkdir -p tests/e2e/artifacts
+          docker compose logs --no-color > tests/e2e/artifacts/docker-compose.log
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results
+          path: |
+            tests/e2e/artifacts
+
+      - name: Shutdown services
+        if: always()
+        run: |
+          set -euxo pipefail
+          docker compose down -v

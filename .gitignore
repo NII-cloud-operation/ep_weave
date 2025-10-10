@@ -11,3 +11,10 @@ ep_weave-*.tgz
 lib/
 static/js/
 static/css/
+
+# Python artifacts
+.python-version
+__pycache__/
+*.py[cod]
+*.pyc
+.ipynb_checkpoints/
