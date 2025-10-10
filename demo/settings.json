@@ -658,6 +658,7 @@
     "enabled": false
   },
   "ep_weave": {
-    "initialPadsPath": "/pads.d"
+    "initialPadsPath": "/pads.d",
+    "toggleRollupKey": "Ctrl+Shift+R"
   }
 }

@@ -23,6 +23,7 @@ let apikey: string | null = null;
 type PluginSettings = {
   basePath?: string;
   initialPadsPath?: string;
+  toggleRollupKey?: string;
 };
 
 async function getPadIdsByTitle(searchEngine: SearchEngine, title: string) {
@@ -70,6 +71,19 @@ async function getAuthorForUser(user: any) {
   const token = `username=${user.username}`;
   return await authorManager.getAuthorId(token, user);
 }
+
+exports.clientVars = (
+  hookName: string,
+  context: any,
+  callback: (data: any) => void
+) => {
+  const epWeaveSettings = (settings.ep_weave || {}) as PluginSettings;
+  return callback({
+    ep_weave: {
+      toggleRollupKey: epWeaveSettings.toggleRollupKey || "ctrl+shift+r",
+    },
+  });
+};
 
 exports.preAuthorize = (
   hookName: any,

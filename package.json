@@ -27,7 +27,7 @@
   "scripts": {
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
-    "build": "tsc -p tsconfig.index.json && tsc -p tsconfig.editor.json && mv lib/pad/static/js/* lib/static/js/ && rm -fr lib/pad/static && mv lib/pad/* lib/ && rm -fr lib/pad && cp -fr src/pad/templates lib/ && cp -fr src/pad/static/css lib/static/ && cp -fr lib/static ."
+    "build": "tsc -p tsconfig.index.json && tsc -p tsconfig.editor.json && mv lib/pad/static/js/* lib/static/js/ && rm -fr lib/pad/static && rm -rf lib/database lib/util && mv lib/pad/* lib/ && rm -fr lib/pad && cp -fr src/pad/templates lib/ && cp -fr src/pad/static/css lib/static/ && cp -fr lib/static ."
   },
   "repository": {
     "type": "git",
