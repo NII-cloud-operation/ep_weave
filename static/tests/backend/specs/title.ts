@@ -51,6 +51,7 @@ describe("access via title", function () {
   it("can access via title", async function () {
     const html1 = () => buildHTML("<p>TESTPAD</p><p>Hello New Pad #PAD2</p>");
     await createPad(padID1);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     await setHTML(padID1, html1());
     await agent
       .get(getHTMLEndPointFor(padID1))
@@ -64,6 +65,7 @@ describe("access via title", function () {
       .expect("Location", `/p/${padID1}`);
     const html2 = () => buildHTML("<p>PAD2</p><p>2nd Pad</p>");
     await createPad(padID2);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     await setHTML(padID2, html2());
     await agent
       .get(getHTMLEndPointFor(padID2))

@@ -3,6 +3,7 @@
     {
       "name": "ep_weave",
       "hooks": {
+        "loadSettings": "ep_weave/lib/index",
         "expressCreateServer" : "ep_weave/lib/index:registerRoute",
         "preAuthorize": "ep_weave/lib/index",
         "clientVars": "ep_weave/lib/index",

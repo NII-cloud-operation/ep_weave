@@ -12,13 +12,14 @@ import { escapeForText } from "./static/js/result";
 const absolutePaths = require("ep_etherpad-lite/node/utils/AbsolutePaths");
 const argv = require("ep_etherpad-lite/node/utils/Cli").argv;
 const { v4: uuidv4 } = require("uuid");
-const settings = require("ep_etherpad-lite/node/utils/Settings");
 const api = require("ep_etherpad-lite/node/db/API");
 const authorManager = require("ep_etherpad-lite/node/db/AuthorManager");
 const db = require("ep_etherpad-lite/node/db/DB").db;
 const importEtherpad = require("ep_etherpad-lite/node/utils/ImportEtherpad");
 
 let apikey: string | null = null;
+let epWeaveSettings: PluginSettings | undefined;
+let epSearchSettings: any;
 
 type PluginSettings = {
   basePath?: string;
@@ -79,12 +80,19 @@ async function getAuthorForUser(user: any) {
   return await authorManager.getAuthorId(token, user);
 }
 
+exports.loadSettings = (hookName: string, context: { settings: any }) => {
+  epWeaveSettings = (context.settings.ep_weave || {}) as PluginSettings;
+  epSearchSettings = context.settings.ep_search || {};
+};
+
 exports.clientVars = (
   hookName: string,
   context: any,
   callback: (data: any) => void
 ) => {
-  const epWeaveSettings = (settings.ep_weave || {}) as PluginSettings;
+  if (!epWeaveSettings) {
+    throw new Error("ep_weave settings not loaded. loadSettings hook must be called first.");
+  }
   return callback({
     ep_weave: {
       toggleRollupKey: epWeaveSettings.toggleRollupKey || "ctrl+shift+r",
@@ -123,10 +131,12 @@ exports.registerRoute = (
   args: ExpressCreateServerArgs,
   cb: (next: any) => void
 ) => {
-  const epWeavePluginSettings = (settings.ep_weave || {}) as PluginSettings;
-  initializePads(epWeavePluginSettings)
+  if (!epWeaveSettings || !epSearchSettings) {
+    throw new Error("ep_weave/ep_search settings not loaded. loadSettings hook must be called first.");
+  }
+  initializePads(epWeaveSettings)
     .then(() => {
-      performRegisterRoute(epWeavePluginSettings, hookName, args, cb);
+      performRegisterRoute(epWeaveSettings!, epSearchSettings!, hookName, args, cb);
     })
     .catch((err) => {
       console.error(
@@ -177,13 +187,13 @@ async function initializePads(epWeavePluginSettings: PluginSettings) {
 
 function performRegisterRoute(
   epWeavePluginSettings: PluginSettings,
+  epSearchPluginSettings: any,
   hookName: any,
   args: ExpressCreateServerArgs,
   cb: (next: any) => void
 ) {
   const basePath = epWeavePluginSettings.basePath || "";
-  const pluginSettings = settings.ep_search || {};
-  const searchEngine = createSearchEngine(pluginSettings);
+  const searchEngine = createSearchEngine(epSearchPluginSettings);
   const apikeyFilename = absolutePaths.makeAbsolute(
     argv.apikey || "./APIKEY.txt"
   );
