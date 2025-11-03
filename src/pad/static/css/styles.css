@@ -37,9 +37,71 @@
 }
 
 #hashview {
-    overflow-y: auto;
+    height: 100%;
+}
+
+.hashview-tabs {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.hashview-tab-buttons {
+    display: flex;
+    border-bottom: 1px solid #ccc;
+    background-color: #f5f5f5;
+}
+
+.hashview-tab-button {
+    padding: 8px 16px;
+    background: white;
+    cursor: pointer;
+    border-top: 2px solid #ccc;
+    border-left: 1px solid #ccc;
+    border-right: none;
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+    font-size: 0.8em;
+}
+
+.hashview-tab-button:first-child {
+    margin-left: 4px;
+}
+
+.hashview-tab-button:last-child {
+    border-right: 1px solid #ccc;
+}
+
+.hashview-tab-button:hover {
+    background-color: #e8e8e8;
+}
+
+.hashview-tab-button.hashview-tab-active {
+    border-top-color: #4a90e2;
+    font-weight: bold;
+}
+
+.hashview-tab-contents {
+    flex: 1;
+    overflow: hidden;
+}
+
+.hashview-tab-content {
+    display: none;
+    height: 100%;
+    overflow: hidden;
+    flex-direction: column;
+}
+
+.hashview-tab-content.hashview-tab-active {
+    display: flex;
+}
+
+#hashview-pads-content,
+#hashview-notebooks-content {
     padding: 8px;
-    height: calc(100% - 92px);
+    overflow-y: auto;
+    flex: 1;
 }
 
 .hashview-toolbar {
@@ -105,6 +167,10 @@
     box-shadow: 0 0 5px #999;
 }
 
+.hash-link.notebook-item {
+    width: 300px;
+}
+
 .hash-title {
     font-weight: bold;
 }
@@ -146,7 +212,6 @@
 }
 
 .hashview-toolbar-child-marker {
-    margin-left: 1em;
     font-size: 1.5em;
     margin-right: 4px;
     color: #999;
