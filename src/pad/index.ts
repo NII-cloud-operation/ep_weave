@@ -227,8 +227,9 @@ function performRegisterRoute(
       });
       return;
     }
+    const sort = req.query.sort as string | undefined;
     searchEngine
-      .search(searchString)
+      .search(searchString, sort ? { sort } : undefined)
       .then((result) => {
         res.send(JSON.stringify(result));
       })
