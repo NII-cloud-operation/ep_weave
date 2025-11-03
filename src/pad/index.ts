@@ -286,8 +286,13 @@ function performRegisterRoute(
       const rows = parseInt(req.query.limit as string) || 10;
       const sort = req.query.sort as string || "notebook_mtime desc";
 
+      const searchStringWithSpace = searchString.replace(/_/g, ' ');
+      const query = searchString === searchStringWithSpace
+        ? `source__markdown__heading:"${searchString}"`
+        : `source__markdown__heading:"${searchString}" OR source__markdown__heading:"${searchStringWithSpace}"`;
+
       const searchQuery = {
-        q: `source__markdown__heading:"${searchString}"`,
+        q: query,
         start,
         rows,
         sort,
@@ -299,7 +304,25 @@ function performRegisterRoute(
 
       console.debug(logPrefix, "Notebook search successful, found:", result.response.numFound, "documents");
 
-      res.send(JSON.stringify(result.response));
+      // Filter results to exact matches only
+      // Note: source__markdown__heading includes markdown symbols (e.g., "# Title", "## Title")
+      const filteredDocs = result.response.docs.filter((doc: any) => {
+        const heading = doc.source__markdown__heading;
+        if (!heading) return false;
+
+        // Remove markdown heading symbols (# ## ### etc) and trim
+        const headingText = heading.replace(/^#+\s*/, '').trim();
+
+        return headingText === searchString || headingText === searchStringWithSpace;
+      });
+
+      const filteredResponse = {
+        ...result.response,
+        docs: filteredDocs,
+        numFound: filteredDocs.length,
+      };
+
+      res.send(JSON.stringify(filteredResponse));
     } catch (err: any) {
       console.error(logPrefix, "Notebook search error:", {
         message: err.message,

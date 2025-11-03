@@ -11,11 +11,18 @@ on:
 
 jobs:
   notebook-e2e:
+    name: E2E Tests ${{ matrix.nbsearch && 'with nbsearch' || 'without nbsearch' }}
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        nbsearch: [false, true]
+      fail-fast: false
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: ${{ matrix.nbsearch && 'recursive' || 'false' }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -41,15 +48,27 @@ jobs:
           set -euxo pipefail
           python -m playwright install --with-deps
 
+      - name: Set docker compose configuration
+        run: |
+          set -euxo pipefail
+          if [ "${{ matrix.nbsearch }}" = "true" ]; then
+            echo "COMPOSE_FILES=-f docker-compose.yml -f docker-compose.nbsearch.yml -f tests/e2e/docker-compose.nbsearch-override.yml" >> $GITHUB_ENV
+            echo "E2E_EXCLUDE_NOTEBOOKS=" >> $GITHUB_ENV
+            echo "NOTEBOOK7_URL=http://localhost:8888/tree?token=test-token" >> $GITHUB_ENV
+          else
+            echo "COMPOSE_FILES=-f docker-compose.yml" >> $GITHUB_ENV
+            echo "E2E_EXCLUDE_NOTEBOOKS=04_NBSearch_Integration.ipynb" >> $GITHUB_ENV
+          fi
+
       - name: Build Docker images
         run: |
           set -euxo pipefail
-          docker compose build etherpad
+          docker compose $COMPOSE_FILES build
 
       - name: Start services
         run: |
           set -euxo pipefail
-          docker compose up -d
+          docker compose $COMPOSE_FILES up -d
 
       - name: Wait for services
         run: |
@@ -68,13 +87,13 @@ jobs:
         run: |
           set -euxo pipefail
           mkdir -p tests/e2e/artifacts
-          docker compose logs --no-color > tests/e2e/artifacts/docker-compose.log
+          docker compose $COMPOSE_FILES logs --no-color > tests/e2e/artifacts/docker-compose.log
 
       - name: Upload artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-results
+          name: e2e-results-${{ matrix.nbsearch && 'with-nbsearch' || 'without-nbsearch' }}
           path: |
             tests/e2e/artifacts
 
@@ -82,4 +101,4 @@ jobs:
         if: always()
         run: |
           set -euxo pipefail
-          docker compose down -v
+          docker compose $COMPOSE_FILES down -v
