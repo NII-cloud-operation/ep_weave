@@ -1,0 +1,4 @@
+[submodule "tests/nbsearch"]
+	path = tests/nbsearch
+	url = https://github.com/NII-cloud-operation/nbsearch.git
+	branch = feature/lab
