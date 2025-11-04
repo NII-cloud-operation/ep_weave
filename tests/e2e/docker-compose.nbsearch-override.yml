@@ -1,0 +1,6 @@
+version: '3'
+
+services:
+  nbsearch:
+    environment:
+      - JUPYTER_TOKEN=test-token

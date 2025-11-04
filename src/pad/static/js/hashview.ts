@@ -157,8 +157,9 @@ function refreshNavbar(navbar: JQuery, title: string) {
   navbar.append(createCloseButton(toggleHashView));
 }
 
-function getCurrentSort() {
-  const sort = $("#hashview-order").val();
+function getCurrentSort(tabType?: 'pads' | 'notebooks') {
+  const id = tabType === 'notebooks' ? '#hashview-order-notebooks' : '#hashview-order';
+  const sort = $(id).val();
   return typeof sort === "string" ? sort : null;
 }
 
@@ -194,12 +195,12 @@ function createMenuItem() {
           if (!currentHashes) {
             return;
           }
-          reloadHashView(
-            ep_weave.title,
-            currentHashes,
-            currentSearchBox,
-            getCurrentSort()
-          );
+          const padsSort = getCurrentSort('pads');
+          reloadPadsHashView(ep_weave.title, currentHashes, currentSearchBox, padsSort);
+          if (ep_weave.notebookSearchEnabled) {
+            const notebooksSort = getCurrentSort('notebooks');
+            reloadNotebooksHashView(ep_weave.title, currentHashes, notebooksSort);
+          }
         },
       });
     });
@@ -527,50 +528,161 @@ async function loadCellsHashView(
   }
 }
 
-function reloadHashView(
+function reloadPadsHashView(
   title: string,
   hashes: RelatedHash[],
   additionalQuery: string | null,
   sort: string | null
 ) {
-  const root = $("#hashview").empty();
-  root.append($("<div></div>").text("Child pages").addClass("hash-text"));
+  const container = $("#hashview-pads-content").empty();
+
+  container.append($("<div></div>").text("Child pages").addClass("hash-text"));
   const childContainer = $("<div></div>").addClass("hash-container");
-  root.append(childContainer);
-  loadChildPads(
-    title,
-    additionalQuery,
-    LIMIT_HASH_VIEW_ITEMS,
-    sort || undefined,
-    childContainer
-  );
+  container.append(childContainer);
+  loadChildPads(title, additionalQuery, LIMIT_HASH_VIEW_ITEMS, sort || undefined, childContainer);
 
-  const tasks = (hashes || []).map(({ displayName, hash, type }) => {
-    root.append($("<div></div>").text(displayName).addClass("hash-text"));
-    const container = $("<div></div>").addClass("hash-container");
-    root.append(container);
+  hashes
+    .filter(({ type }) => type !== 'cells')
+    .forEach(({ displayName, hash }) => {
+      container.append($("<div></div>").text(displayName).addClass("hash-text"));
+      const itemContainer = $("<div></div>").addClass("hash-container");
+      container.append(itemContainer);
+      loadPadsHashView(title, hash, additionalQuery, LIMIT_HASH_VIEW_ITEMS, sort || undefined, itemContainer);
+    });
+}
 
-    if (type === 'cells') {
-      return loadCellsHashView(
-        title,
-        hash,
-        additionalQuery,
-        LIMIT_CELLS_VIEW_ITEMS,
-        sort || undefined,
-        container
-      );
-    } else {
-      return loadPadsHashView(
-        title,
-        hash,
-        additionalQuery,
-        LIMIT_HASH_VIEW_ITEMS,
-        sort || undefined,
-        container
-      );
-    }
+function reloadNotebooksHashView(
+  title: string,
+  hashes: RelatedHash[],
+  sort: string | null
+) {
+  const container = $("#hashview-notebooks-content").empty();
+
+  const cellHashes = hashes.filter(({ type }) => type === 'cells');
+  if (cellHashes.length === 0) {
+    container.append($("<div></div>").text("No hashtags found in this page"));
+    return;
+  }
+
+  cellHashes.forEach(({ displayName, hash }) => {
+    container.append($("<div></div>").text(displayName).addClass("hash-text"));
+    const itemContainer = $("<div></div>").addClass("hash-container");
+    container.append(itemContainer);
+    loadCellsHashView(title, hash, null, LIMIT_CELLS_VIEW_ITEMS, sort || undefined, itemContainer);
   });
-  Promise.all(tasks).then(() => {});
+}
+
+function createPadsHashView(container: JQuery) {
+  const marker = $("<div>").text(">").addClass("hashview-toolbar-child-marker");
+  const toolbar = createToolbar({
+    onSort: () => {
+      const { ep_weave } = clientVars;
+      const sort = getCurrentSort('pads');
+      reloadPadsHashView(ep_weave.title, currentHashes, currentSearchBox, sort);
+    },
+    onSearch: (query: string) => {
+      currentSearchBox = query;
+      const { ep_weave } = clientVars;
+      const sort = getCurrentSort('pads');
+      reloadPadsHashView(ep_weave.title, currentHashes, query, sort);
+    },
+    onCreate: (query: string) => {
+      const { ep_weave } = clientVars;
+      let { title } = ep_weave;
+      if (!title.endsWith("/")) {
+        title += "/";
+      }
+      title += query;
+      const basePath = getBasePath();
+      window.open(`${basePath}/t/${encodeURIComponent(title)}`, "_blank");
+    },
+  });
+  toolbar.prepend(marker);
+
+  const content = $("<div></div>").attr("id", "hashview-pads-content");
+  container.append(toolbar).append(content);
+}
+
+function createNotebooksHashView(container: JQuery) {
+  const sortSelection = $("<select></select>")
+    .attr("id", "hashview-order-notebooks")
+    .append(
+      $("<optgroup></optgroup>")
+        .attr("label", "Sort by")
+        .append(
+          $("<option></option>")
+            .attr("value", "notebook_mtime desc")
+            .attr("selected", "selected")
+            .text("Date modified")
+        )
+        .append(
+          $("<option></option>")
+            .attr("value", "notebook_filename asc")
+            .text("Filename")
+        )
+    )
+    .on("change", () => {
+      const { ep_weave } = clientVars;
+      const sort = getCurrentSort('notebooks');
+      reloadNotebooksHashView(ep_weave.title, currentHashes, sort);
+    });
+
+  const toolbar = $("<div></div>")
+    .addClass("hashview-toolbar")
+    .append($("<div></div>").addClass("hashview-sort").append(sortSelection));
+
+  const content = $("<div></div>").attr("id", "hashview-notebooks-content");
+  container.append(toolbar).append(content);
+}
+
+function createHashView() {
+  const { ep_weave } = clientVars;
+  const root = $("#hashview");
+
+  if (ep_weave && ep_weave.notebookSearchEnabled) {
+    root.empty();
+
+    const tabContainer = $("<div></div>").addClass("hashview-tabs");
+    const tabButtons = $("<div></div>").addClass("hashview-tab-buttons");
+    const tabContents = $("<div></div>").addClass("hashview-tab-contents");
+
+    const padsTab = $("<div></div>")
+      .addClass("hashview-tab-content hashview-tab-active")
+      .attr("data-tab", "pads");
+    const notebooksTab = $("<div></div>")
+      .addClass("hashview-tab-content")
+      .attr("data-tab", "notebooks");
+
+    const switchTab = (tabName: string) => {
+      tabButtons.find(".hashview-tab-button").removeClass("hashview-tab-active");
+      tabButtons.find(`[data-tab="${tabName}"]`).addClass("hashview-tab-active");
+      tabContents.find(".hashview-tab-content").removeClass("hashview-tab-active");
+      tabContents.find(`[data-tab="${tabName}"]`).addClass("hashview-tab-active");
+    };
+
+    $("<button></button>")
+      .addClass("hashview-tab-button hashview-tab-active")
+      .text("Pads")
+      .attr("data-tab", "pads")
+      .on("click", () => switchTab("pads"))
+      .appendTo(tabButtons);
+
+    $("<button></button>")
+      .addClass("hashview-tab-button")
+      .text("Notebooks")
+      .attr("data-tab", "notebooks")
+      .on("click", () => switchTab("notebooks"))
+      .appendTo(tabButtons);
+
+    createPadsHashView(padsTab);
+    createNotebooksHashView(notebooksTab);
+
+    tabContents.append(padsTab).append(notebooksTab);
+    tabContainer.append(tabButtons).append(tabContents);
+    root.append(tabContainer);
+  } else {
+    createPadsHashView(root);
+  }
 }
 
 function addBeforeUnloadListener() {
@@ -682,7 +794,12 @@ exports.aceEditEvent = (hook: string, context: AceEditEventContext) => {
   }
   currentHashes = relatedHashes;
   console.debug(logPrefix, "EDITED", hashes);
-  reloadHashView(title, relatedHashes, currentSearchBox, getCurrentSort());
+  const padsSort = getCurrentSort('pads');
+  reloadPadsHashView(title, relatedHashes, currentSearchBox, padsSort);
+  if (ep_weave.notebookSearchEnabled) {
+    const notebooksSort = getCurrentSort('notebooks');
+    reloadNotebooksHashView(title, relatedHashes, notebooksSort);
+  }
 };
 
 exports.postToolbarInit = (hook: any, context: PostToolbarInit) => {
@@ -698,46 +815,6 @@ exports.postToolbarInit = (hook: any, context: PostToolbarInit) => {
     .attr("id", "hashview-container")
     .append(handle)
     .append(navbar)
-    .append(
-      createToolbar({
-        onSort: (sort: string) => {
-          if (!clientVars) {
-            return;
-          }
-          const { ep_weave } = clientVars;
-          if (!currentHashes) {
-            return;
-          }
-          reloadHashView(ep_weave.title, currentHashes, currentSearchBox, sort);
-        },
-        onSearch: (query: string) => {
-          currentSearchBox = query;
-          const { ep_weave } = clientVars;
-          reloadHashView(
-            ep_weave.title,
-            currentHashes,
-            query,
-            getCurrentSort()
-          );
-        },
-        onCreate: (query: string) => {
-          const { ep_weave } = clientVars;
-          if (!ep_weave) {
-            throw new Error("Not initialized");
-          }
-          if (ep_weave.title === undefined) {
-            throw new Error("Title is not set");
-          }
-          let { title } = ep_weave;
-          if (!title.endsWith("/")) {
-            title += "/";
-          }
-          title += query;
-          const basePath = getBasePath();
-          window.open(`${basePath}/t/${encodeURIComponent(title)}`, "_blank");
-        },
-      }).prepend($("<div>").text(">").addClass("hashview-toolbar-child-marker"))
-    )
     .append(result)
     .on("click", () => {
       const collapsed = $(".hashview-collapsed");
@@ -755,6 +832,7 @@ exports.postToolbarInit = (hook: any, context: PostToolbarInit) => {
     return;
   }
   checkTitleDuplicated(ep_weave.title, clientVars);
+  createHashView();
 };
 
 exports.aceGetFilterStack = (hook: any, context: AceGetFilterStackContext) => {

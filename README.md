@@ -31,3 +31,61 @@ You can configure the following settings in settings.json.
 
 - basePath: The base path of the etherpad. The default is "". If you deploy Etherpad to a subdirectory, set the subdirectory path.
 - initialPadsPath: The path to the initial pads. The default is "". When a path is set, the plugin will create an initial pad from the files in the directory specified by this path when the server is initialized. The file must be a JSON file with the `.etherpad` extension that has been exported from Etherpad.
+
+## Notebook Search Integration
+
+ep_weave can integrate with [nbsearch](https://github.com/NII-cloud-operation/nbsearch) to search Jupyter Notebooks by hashtags found in pads.
+
+To configure notebook search, add the following settings:
+
+```json
+"ep_weave": {
+  "notebookSearch": {
+    "baseUrl": "http://localhost:8983",
+    "core": "jupyter-cell",
+    "username": "solr_username",
+    "password": "solr_password",
+    "jupyterBaseUrl": "https://jupyter.example.com/tree"
+  }
+}
+```
+
+- `baseUrl`: Solr server URL (required)
+- `core`: Solr core name (default: "jupyter-cell")
+- `username`: Basic auth username for Solr (optional)
+- `password`: Basic auth password for Solr (optional)
+- `jupyterBaseUrl`: Jupyter base URL for generating links (optional)
+
+# Development
+
+## Testing with nbsearch
+
+To test the notebook search integration locally, you can use the provided `docker-compose.nbsearch.yml` configuration which includes a full nbsearch environment.
+
+### Setup
+
+First, initialize the nbsearch submodule:
+
+```bash
+git submodule update --init --recursive
+```
+
+### Running with nbsearch
+
+Start the environment with both ep_weave and nbsearch:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.nbsearch.yml up -d
+```
+
+This will start:
+- ep_weave (accessible at http://localhost:9001)
+- nbsearch with Solr and test notebooks (JupyterLab at http://localhost:8888, Solr at http://localhost:8984)
+
+The test notebooks in nbsearch contain hashtags that you can reference in your pads, and ep_weave will display matching notebooks in the sidebar.
+
+### Stopping
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.nbsearch.yml down
+```

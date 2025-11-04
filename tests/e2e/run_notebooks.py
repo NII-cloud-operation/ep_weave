@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 import argparse
 import os
+from fnmatch import fnmatch
 
 import papermill as pm
 from papermill.exceptions import PapermillExecutionError
@@ -33,6 +34,15 @@ def main() -> int:
         raise FileNotFoundError(f"Notebook directory not found: {NOTEBOOK_ROOT}")
 
     notebooks = sorted(NOTEBOOK_ROOT.glob("*.ipynb"))
+
+    # Check for excluded notebook patterns
+    exclude_patterns_str = os.getenv("E2E_EXCLUDE_NOTEBOOKS", "")
+    exclude_patterns = [p.strip() for p in exclude_patterns_str.split(",") if p.strip()]
+
+    if exclude_patterns:
+        original_count = len(notebooks)
+        notebooks = [nb for nb in notebooks if not any(fnmatch(nb.name, pattern) for pattern in exclude_patterns)]
+        print(f"Excluded {original_count - len(notebooks)} notebook(s) matching patterns: {exclude_patterns}")
 
     transition_timeout_env = os.getenv("E2E_TRANSITION_TIMEOUT")
     if transition_timeout_env:
@@ -61,6 +71,11 @@ def main() -> int:
         parameters = {"default_result_path": str(notebook_artifact_dir)}
         if transition_timeout is not None:
             parameters["transition_timeout"] = transition_timeout
+
+        notebook7_url = os.getenv("NOTEBOOK7_URL")
+        if notebook7_url:
+            parameters["notebook7_url"] = notebook7_url
+
         try:
             pm.execute_notebook(
                 str(notebook),

@@ -1,0 +1,27 @@
+version: '3'
+
+services:
+  # nbsearch service provides:
+  # - Solr with jupyter-cell and jupyter-notebook cores
+  # - JupyterLab with test notebooks
+  # - MinIO for notebook storage (internal use only)
+  # - Automatic indexing of test notebooks
+  nbsearch:
+    build: ./tests/nbsearch
+    ports:
+      - "8888:8888"  # JupyterLab (for viewing test notebooks)
+      - "8984:8983"  # Solr (for ep_weave to query)
+    volumes:
+      - nbsearch_solr_data:/var/solr
+      - nbsearch_minio_data:/var/minio
+    restart: always
+
+  etherpad:
+    volumes:
+      - ./demo/settings.nbsearch.json:/opt/etherpad-lite/settings.json:ro
+    depends_on:
+      - nbsearch
+
+volumes:
+  nbsearch_solr_data:
+  nbsearch_minio_data:
