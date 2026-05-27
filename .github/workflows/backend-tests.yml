@@ -28,10 +28,13 @@ jobs:
         with:
           repository: ether/etherpad-lite
           path: etherpad-lite
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
       - uses: pnpm/action-setup@v3
         name: Install pnpm
         with:
-          version: 8
+          version: 10
           run_install: false
       - name: Get pnpm store directory
         shell: bash
@@ -70,8 +73,8 @@ jobs:
       - name: Build plugin
         working-directory: ./plugin
         run: |
-          npm i --include dev
-          npm run build
+          pnpm i
+          pnpm run build
           ls -la .
       - name: Build Solr
         working-directory: ./plugin
