@@ -18,26 +18,30 @@ jobs:
         uses: docker/setup-buildx-action@v3
       -
         name: Install libreoffice
-        uses: awalsh128/cache-apt-pkgs-action@v1.5.3
+        uses: awalsh128/cache-apt-pkgs-action@v1.6.0
         with:
           packages: libreoffice libreoffice-pdfimport
           version: 1.0
       -
         name: Install etherpad core
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
         with:
           repository: ether/etherpad-lite
           path: etherpad-lite
-      - uses: pnpm/action-setup@v3
+      - uses: actions/setup-node@v6
+        name: Install Node.js
+        with:
+          node-version: 24
+      - uses: pnpm/action-setup@v6
         name: Install pnpm
         with:
-          version: 8
+          package_json_file: ./etherpad-lite/package.json
           run_install: false
       - name: Get pnpm store directory
         shell: bash
         run: |
           echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         name: Setup pnpm cache
         with:
           path: ${{ env.STORE_PATH }}
@@ -46,20 +50,9 @@ jobs:
             ${{ runner.os }}-pnpm-store-
       -
         name: Checkout plugin repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
         with:
           path: plugin
-      -
-        name: Determine plugin name
-        id: plugin_name
-        working-directory: ./plugin
-        run: |
-          npx -c 'printf %s\\n "::set-output name=plugin_name::${npm_package_name}"'
-      -
-        name: Link plugin directory
-        working-directory: ./plugin
-        run: |
-          pnpm link --global
       - name: Remove tests
         working-directory: ./etherpad-lite
         run: rm -rf ./src/tests/backend/specs
@@ -70,42 +63,28 @@ jobs:
       - name: Build plugin
         working-directory: ./plugin
         run: |
-          npm i --include dev
-          npm run build
-          ls -la .
+          pnpm i --no-frozen-lockfile
+          pnpm run build
       - name: Build Solr
         working-directory: ./plugin
         run: |
           docker buildx build -o type=docker -t ep_weave/solr -f ./solr/Dockerfile .
-      - name: Link plugin to etherpad-lite
+      - name: Install plugin
         working-directory: ./etherpad-lite
         run: |
-          pnpm link --global $PLUGIN_NAME
-          pnpm run plugins i --path  ../../plugin
-        env:
-          PLUGIN_NAME: ${{ steps.plugin_name.outputs.plugin_name }}
+          pnpm run plugins i --path ../../plugin
       - name: Prepare ep_search
         working-directory: ./etherpad-lite
         run: |
           git clone -b feature/search-engine https://github.com/NII-cloud-operation/ep_search.git /tmp/ep_search
-          cd /tmp/ep_search
           ls -la /tmp/ep_search
-          npm pack
       - name: Install ep_search
         working-directory: ./etherpad-lite
         run: |
           pnpm run plugins i --path /tmp/ep_search
-      - name: Link ep_etherpad-lite
-        working-directory: ./etherpad-lite/src
-        run: |
-          pnpm link --global
-      - name: Link etherpad to plugin
-        working-directory: ./plugin
-        run: |
-          pnpm link --global ep_etherpad-lite
       -
         name: Run the backend tests
-        working-directory: ./etherpad-lite
+        working-directory: ./etherpad-lite/src
         run: |
           docker run -d --name etherpad-solr -p 8983:8983 ep_weave/solr
           MAX_ATTEMPTS=60
@@ -129,7 +108,13 @@ jobs:
             fi
             sleep 0.5
           done
-          pnpm run test --settings ../plugin/tests/settings.json
+          shopt -s globstar
+          res=$(find ./plugin_packages -path "*/static/tests/backend/specs/*" 2>/dev/null | wc -l)
+          if [ $res -eq 0 ]; then
+            echo "No backend tests found"
+          else
+            npx cross-env NODE_ENV=production mocha --import=tsx --timeout 120000 --recursive plugin_packages/ep_*/static/tests/backend/specs/** --settings ../plugin/tests/settings.json
+          fi
         env:
           LOGLEVEL: DEBUG
       - name: Stop Solr

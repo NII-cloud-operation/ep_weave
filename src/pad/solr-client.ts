@@ -1,4 +1,3 @@
-import fetch, { Headers } from 'node-fetch';
 
 interface SolrClientConfig {
   baseUrl: string;

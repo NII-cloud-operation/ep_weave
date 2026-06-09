@@ -1,5 +1,5 @@
 ARG ETHERPAD_IMAGE_NAME="etherpad/etherpad"
-ARG ETHERPAD_IMAGE_TAG="2"
+ARG ETHERPAD_IMAGE_TAG="3"
 
 FROM mcr.microsoft.com/devcontainers/typescript-node:18 AS build-stage
 
@@ -12,19 +12,17 @@ FROM ${ETHERPAD_IMAGE_NAME}:${ETHERPAD_IMAGE_TAG}
 
 USER root
 
-COPY --from=build-stage /app/ep_weave /tmp/ep_weave
+COPY --from=build-stage --chown=etherpad:etherpad /app/ep_weave /tmp/ep_weave
 
 # ep_search
 RUN git clone -b feature/search-engine https://github.com/NII-cloud-operation/ep_search.git /tmp/ep_search \
-    && cd /tmp/ep_search \
-    && ls -la /tmp/ep_search \
-    && npm pack
+    && chown -R etherpad:etherpad /tmp/ep_search \
+    && ls -la /tmp/ep_search
 
 # ep_webrtc
 RUN git clone -b feature/sfu https://github.com/NII-cloud-operation/ep_webrtc.git /tmp/ep_webrtc \
-    && cd /tmp/ep_webrtc \
-    && ls -la /tmp/ep_webrtc \
-    && npm pack
+    && chown -R etherpad:etherpad /tmp/ep_webrtc \
+    && ls -la /tmp/ep_webrtc
 
 USER etherpad
 
