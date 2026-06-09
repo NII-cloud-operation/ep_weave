@@ -89,4 +89,5 @@ jobs:
           # - "toolbar <li>/<a> wrappers are presentational": ep_weave adds custom toolbar buttons
           # - "settings popup stays scrollable when the viewport is short": ep_weave modifies pad UI layout
           # - "Pad-wide font dropdown opens visibly when popup is scrolled to bottom": same reason as above
-          pnpm run test-ui --project=chromium --grep-invert="the share link is the actual pad url|is an iframe with the correct url parameters and correct size|https://etherpad\.org/#foo|toolbar <li>/<a> wrappers are presentational|settings popup stays scrollable when the viewport is short|Pad-wide font dropdown opens visibly when popup is scrolled to bottom"
+          # - "share link encodes special characters in pad name": ep_weave rewrites pad URLs to title-based /t/ URLs
+          pnpm run test-ui --project=chromium --grep-invert="the share link is the actual pad url|is an iframe with the correct url parameters and correct size|https://etherpad\.org/#foo|toolbar <li>/<a> wrappers are presentational|settings popup stays scrollable when the viewport is short|Pad-wide font dropdown opens visibly when popup is scrolled to bottom|share link encodes special characters in pad name"
