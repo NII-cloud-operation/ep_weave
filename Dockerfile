@@ -1,7 +1,7 @@
 ARG ETHERPAD_IMAGE_NAME="etherpad/etherpad"
 ARG ETHERPAD_IMAGE_TAG="3"
 
-FROM mcr.microsoft.com/devcontainers/typescript-node:18 AS build-stage
+FROM mcr.microsoft.com/devcontainers/typescript-node:24 AS build-stage
 
 COPY . /app/ep_weave
 RUN cd /app/ep_weave \
