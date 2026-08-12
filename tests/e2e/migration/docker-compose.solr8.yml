@@ -1,0 +1,7 @@
+services:
+  solr:
+    image: solr:8
+    build: !reset null
+    command: solr-precreate pad /opt/solr8/pad
+    volumes:
+      - ./tests/e2e/migration/solr8-conf:/opt/solr8/pad/conf:ro

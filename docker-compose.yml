@@ -23,6 +23,12 @@ services:
       dockerfile: solr/Dockerfile
     volumes:
       - solr_data_vol:/var/solr/
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8983/solr/pad/admin/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
     restart: always
 
   etherpad:
@@ -42,6 +48,8 @@ services:
     volumes:
       - ./demo/settings.json:/opt/etherpad-lite/settings.json:ro
     depends_on:
-      - postgresql
-      - solr
+      postgresql:
+        condition: service_started
+      solr:
+        condition: service_healthy
     restart: always

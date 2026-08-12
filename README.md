@@ -56,6 +56,37 @@ To configure notebook search, add the following settings:
 - `password`: Basic auth password for Solr (optional)
 - `jupyterBaseUrl`: Jupyter base URL for generating links (optional)
 
+# Troubleshooting
+
+## Search does not work / the top page shows no pads
+
+Check the state of the Solr container:
+
+```bash
+docker compose ps solr
+```
+
+If it is `unhealthy`, the `pad` core has failed to load. This typically
+happens when the Solr data volume was created by an older major version of
+Solr (e.g. after upgrading ep_weave across the Solr 8 to 9 boundary): the
+old index and core configuration cannot be loaded by the new version.
+
+The index can be rebuilt from scratch because all pads are stored in the
+Etherpad database. Remove the Solr data volume and restart both Solr and
+Etherpad:
+
+```bash
+docker compose rm -sf solr
+docker volume rm ep_weave_solr_data_vol
+docker compose up -d
+docker compose restart etherpad
+```
+
+ep_weave reindexes all pads at Etherpad startup when the index is empty.
+Restarting Etherpad is required even if it is already running, because the
+reindex only runs at startup. If search results are still incomplete
+afterwards (e.g. the reindex was interrupted), repeat the same procedure.
+
 # Development
 
 ## Testing with nbsearch
