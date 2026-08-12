@@ -2,23 +2,25 @@ let isResizing = false,
   lastY = 0;
 
 export function windowResized() {
-  const editbarHeight = $("#editbar").outerHeight(true);
+  // The hashview container is positioned at the bottom of #editorcontainerbox,
+  // so the editor gets the remaining height of the box. Deriving it from the
+  // window height instead breaks when the pad layout has other elements below
+  // the box.
+  const editorContainerBoxHeight = $("#editorcontainerbox").height();
   const hashviewcontainerHeight = $("#hashview-container").outerHeight(true);
-  const windowHeight = $(window).height();
 
   if (
-    editbarHeight === undefined ||
-    hashviewcontainerHeight === undefined ||
-    windowHeight === undefined
+    editorContainerBoxHeight === undefined ||
+    hashviewcontainerHeight === undefined
   ) {
     console.warn(
-      "Failed to get height of editbar, hashviewcontainer, or window."
+      "Failed to get height of editorcontainerbox or hashview-container."
     );
     return;
   }
 
   var newEditorContainerHeight =
-    windowHeight - (editbarHeight + hashviewcontainerHeight);
+    editorContainerBoxHeight - hashviewcontainerHeight;
   $("#editorcontainer").height(newEditorContainerHeight);
 }
 
