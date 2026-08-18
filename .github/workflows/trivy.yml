@@ -1,0 +1,131 @@
+name: Trivy Scan
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+jobs:
+  scan:
+    name: Scan ${{ matrix.name }} image
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: etherpad
+            dockerfile: Dockerfile
+          - name: solr
+            dockerfile: solr/Dockerfile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build -t ep_weave-${{ matrix.name }}:${{ github.sha }} -f ${{ matrix.dockerfile }} .
+
+      - name: Scan Docker image with Trivy
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: ep_weave-${{ matrix.name }}:${{ github.sha }}
+          scanners: vuln
+          vuln-type: os,library
+          format: json
+          output: trivy-results-${{ matrix.name }}.json
+          exit-code: '0'
+          list-all-pkgs: 'true'
+
+      - name: Convert Trivy report to SARIF
+        env:
+          TRIVY_SCANNERS: ''
+        run: |
+          trivy convert \
+            --format sarif \
+            --output trivy-results-${{ matrix.name }}.sarif \
+            trivy-results-${{ matrix.name }}.json
+
+      - name: Render vulnerability summary
+        env:
+          IMAGE: ep_weave-${{ matrix.name }}:${{ github.sha }}
+          COMMIT: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python3 .github/scripts/ci/render-trivy-report.py \
+            --input trivy-results-${{ matrix.name }}.json \
+            --output trivy-report-${{ matrix.name }}.md \
+            --image "$IMAGE" \
+            --commit "$COMMIT" \
+            --run-url "$RUN_URL"
+          tee -a "$GITHUB_STEP_SUMMARY" < trivy-report-${{ matrix.name }}.md
+
+      - name: Upload vulnerability reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-image-scan-${{ matrix.name }}
+          path: |
+            trivy-results-${{ matrix.name }}.json
+            trivy-results-${{ matrix.name }}.sarif
+            trivy-report-${{ matrix.name }}.md
+          retention-days: 14
+
+      - name: Upload SARIF to GitHub Code Scanning
+        if: >-
+          github.event_name != 'pull_request' ||
+          github.event.pull_request.head.repo.full_name == github.repository
+        uses: github/codeql-action/upload-sarif@5595ccaf912efad79be6eef63a5619ff05969be3 # v4
+        with:
+          sarif_file: trivy-results-${{ matrix.name }}.sarif
+          category: trivy-${{ matrix.name }}
+
+  comment-image-scan:
+    runs-on: ubuntu-latest
+    needs: scan
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      actions: read
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Download vulnerability summaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: trivy-image-scan-*
+
+      - name: Create or update PR comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          cat trivy-image-scan-*/trivy-report-*.md > trivy-report.md
+          comments_endpoint="repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments"
+          comment_id="$({
+            gh api --paginate "$comments_endpoint" --jq \
+              '.[] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- trivy-image-scan -->"))) | .id'
+          } | sed -n '1p')"
+          if [[ -n "$comment_id" ]]; then
+            gh api \
+              --method PATCH \
+              "repos/${GITHUB_REPOSITORY}/issues/comments/${comment_id}" \
+              -F body=@trivy-report.md
+          else
+            gh api \
+              --method POST \
+              "$comments_endpoint" \
+              -F body=@trivy-report.md
+          fi

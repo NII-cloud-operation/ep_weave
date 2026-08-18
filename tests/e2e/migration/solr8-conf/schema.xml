@@ -2,9 +2,9 @@
 <schema name="pad" version="1.6">
   <uniqueKey>id</uniqueKey>
 
-  <fieldType name="long" class="solr.LongPointField" docValues="true"/>
+  <fieldType name="long" class="solr.TrieLongField" positionIncrementGap="0" docValues="true" precisionStep="0"/>
   <fieldType name="string" class="solr.StrField" sortMissingLast="true" docValues="true"/>
-  <fieldType name="date" class="solr.DatePointField" sortMissingLast="true" docValues="true"/>
+  <fieldType name="date" class="solr.TrieDateField" sortMissingLast="true" docValues="true"/>
   <fieldType name="text_ja" class="solr.TextField" positionIncrementGap="100" autoGeneratePhraseQueries="false">
     <analyzer>
       <tokenizer class="solr.JapaneseTokenizerFactory" mode="normal" discardPunctuation="true"/>

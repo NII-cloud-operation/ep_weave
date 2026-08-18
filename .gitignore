@@ -18,3 +18,4 @@ __pycache__/
 *.py[cod]
 *.pyc
 .ipynb_checkpoints/
+tests/e2e/artifacts/

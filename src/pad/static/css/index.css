@@ -1,9 +1,34 @@
 #wrapper {
     max-width: none !important;
+    margin: 0;
+    background: none;
+    border: none;
+    box-shadow: none;
 }
 
 #inner {
     display: none;
+}
+
+/* Selectors mirror colibris index.css specificity; !important because the
+   core index script sets display via inline style. */
+body nav,
+.mission-statement,
+.pad-datalist {
+    display: none !important;
+}
+
+body {
+    background: url(../../../../skins/colibris/images/fond.jpg) center center no-repeat fixed #fff;
+    background-size: cover;
+    font-family: Quicksand, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+}
+
+.body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
 }
 
 label[for="searchInput"] {
@@ -40,6 +65,7 @@ label[for="searchInput"] {
     margin: 0 auto;
     padding: 8px;
     display: flex;
+    align-items: center;
 }
 
 .weave-toolbar .hashview-toolbar {
@@ -80,6 +106,10 @@ label[for="searchInput"] {
 .hashview-search {
     display: flex;
     min-width: 50%;
+}
+
+.hashview-search button {
+    padding: 5px 10px;
 }
 
 .hashview-search-box {
