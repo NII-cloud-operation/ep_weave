@@ -11,12 +11,14 @@ RESULT_DIR="${RESULT_DIR:-tests/e2e/artifacts/migration}"
 TRANSITION_TIMEOUT="${E2E_TRANSITION_TIMEOUT:-30000}"
 export ETHERPAD_URL="${ETHERPAD_URL:-http://localhost:9001/health}"
 mkdir -p "${RESULT_DIR}"
+INDEXED_RECORD_PATH="$(cd "${RESULT_DIR}" && pwd)/pad-indexed.txt"
 
 run_nb() {
   python3 -m papermill "tests/e2e/migration/$1.ipynb" "${RESULT_DIR}/$1-result.ipynb" \
     --cwd tests/e2e/notebooks \
     -p etherpad_url "${ETHERPAD_URL%health}" \
-    -p transition_timeout "${TRANSITION_TIMEOUT}"
+    -p transition_timeout "${TRANSITION_TIMEOUT}" \
+    -p indexed_record_path "${INDEXED_RECORD_PATH}"
 }
 
 docker compose ${OLD} up -d --build

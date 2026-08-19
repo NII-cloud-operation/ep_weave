@@ -4,15 +4,6 @@ import { logPrefix } from "./util/log";
 
 const LENGTH_SHORT_TEXT = 32;
 
-function extractCreated(pad: PadType) {
-  const revs = (pad.savedRevisions || []).map((rev) => rev.timestamp);
-  revs.sort();
-  if (revs.length === 0) {
-    return null;
-  }
-  return new Date(revs[0]).toISOString();
-}
-
 function extractShortText(text: string) {
   const titleIndex = text.indexOf("\n");
   let atext = text;
@@ -24,20 +15,12 @@ function extractShortText(text: string) {
     : atext;
 }
 
-exports.create = (pluginSettings: any) => (pad: PadType) => {
+exports.create = (pluginSettings: any) => async (pad: PadType) => {
   const atext = (pad.atext || {}).text || "";
   const shorttext = extractShortText(atext);
-  const result: {
-    indexed: string;
-    id: string;
-    _text_: string;
-    atext: string;
-    title: string;
-    hash: string;
-    shorttext: string;
-    created?: string;
-  } = {
-    indexed: new Date().toISOString(),
+  const result = {
+    indexed: new Date(await pad.getLastEdit()).toISOString(),
+    created: new Date(await pad.getRevisionDate(0)).toISOString(),
     id: pad.id,
     _text_: atext,
     atext,
@@ -45,10 +28,6 @@ exports.create = (pluginSettings: any) => (pad: PadType) => {
     hash: atext,
     shorttext,
   };
-  const created = extractCreated(pad);
-  if (created !== null) {
-    result.created = created;
-  }
   console.debug(logPrefix, "serialize", pad, result);
   return result;
 };

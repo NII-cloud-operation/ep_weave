@@ -19,6 +19,7 @@ declare module "ep_search/setup" {
     setText: (text: string, authorId?: string) => Promise<void>;
     appendText: (text: string) => Promise<void>;
     getHeadRevisionNumber: () => number;
+    getLastEdit: () => Promise<number>;
     getRevisionDate: (rev: number) => Promise<number>;
     getRevisionChangeset: (rev: number) => Promise<AChangeSet>;
     appendRevision: (changeset: AChangeSet, author: string) => Promise<void>;
