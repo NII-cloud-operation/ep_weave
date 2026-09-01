@@ -29,7 +29,7 @@ jobs:
             dockerfile: solr/Dockerfile
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Build Docker image
         run: |
@@ -71,7 +71,7 @@ jobs:
           tee -a "$GITHUB_STEP_SUMMARY" < trivy-report-${{ matrix.name }}.md
 
       - name: Upload vulnerability reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: trivy-image-scan-${{ matrix.name }}
           path: |
@@ -84,7 +84,7 @@ jobs:
         if: >-
           github.event_name != 'pull_request' ||
           github.event.pull_request.head.repo.full_name == github.repository
-        uses: github/codeql-action/upload-sarif@5595ccaf912efad79be6eef63a5619ff05969be3 # v4
+        uses: github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4
         with:
           sarif_file: trivy-results-${{ matrix.name }}.sarif
           category: trivy-${{ matrix.name }}
