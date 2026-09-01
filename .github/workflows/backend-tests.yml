@@ -15,16 +15,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
       -
         name: Install libreoffice
-        uses: awalsh128/cache-apt-pkgs-action@v1.6.0
+        uses: awalsh128/cache-apt-pkgs-action@v1.6.3
         with:
           packages: libreoffice libreoffice-pdfimport
           version: 1.0
       -
         name: Install etherpad core
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: ether/etherpad-lite
           path: etherpad-lite
@@ -50,7 +50,7 @@ jobs:
             ${{ runner.os }}-pnpm-store-
       -
         name: Checkout plugin repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           path: plugin
       - name: Remove tests
