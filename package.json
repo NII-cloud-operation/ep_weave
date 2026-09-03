@@ -8,9 +8,9 @@
   },
   "contributors": [],
   "dependencies": {
-    "minisearch": "^6.0.1",
-    "node-html-parser": "^6.1.5",
-    "remove-markdown": "^0.6.4",
+    "minisearch": "^7.2.0",
+    "node-html-parser": "^9.0.2",
+    "remove-markdown": "^0.7.0",
     "uuid": "^14.0.1"
   },
   "engines": {
@@ -19,10 +19,10 @@
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/jquery": "^4.0.1",
-    "@types/node": "^26.2.0",
-    "eslint": "^8.57.0",
+    "@types/node": "^26.4.0",
+    "eslint": "^10.9.1",
     "eslint-config-etherpad": "^4.0.4",
-    "typescript": "^5.4.2"
+    "typescript": "^7.0.2"
   },
   "scripts": {
     "lint": "eslint .",
