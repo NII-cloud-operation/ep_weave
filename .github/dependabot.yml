@@ -17,3 +17,7 @@ updates:
       npm-deps:
         patterns:
           - "*"
+    ignore:
+      # TypeScript 7 drops the AMD/outFile build that bundles src/index
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
