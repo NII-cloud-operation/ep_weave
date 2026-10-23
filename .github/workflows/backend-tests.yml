@@ -82,6 +82,9 @@ jobs:
         working-directory: ./etherpad-lite
         run: |
           pnpm run plugins i --path /tmp/ep_search
+      - name: Create settings.json
+        working-directory: ./etherpad-lite
+        run: cp ../plugin/tests/settings.json settings.json
       -
         name: Run the backend tests
         working-directory: ./etherpad-lite/src
@@ -113,7 +116,7 @@ jobs:
           if [ $res -eq 0 ]; then
             echo "No backend tests found"
           else
-            npx cross-env NODE_ENV=production mocha --import=tsx --timeout 120000 --recursive plugin_packages/ep_*/static/tests/backend/specs/** --settings ../plugin/tests/settings.json
+            npx cross-env NODE_ENV=production mocha --import=tsx --timeout 120000 --recursive plugin_packages/ep_*/static/tests/backend/specs/**
           fi
         env:
           LOGLEVEL: DEBUG

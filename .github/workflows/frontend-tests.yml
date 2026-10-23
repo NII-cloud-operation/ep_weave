@@ -89,4 +89,6 @@ jobs:
           # - "toolbar <li>/<a> wrappers are presentational": ep_weave adds custom toolbar buttons
           # - "share link encodes special characters in pad name": ep_weave rewrites pad URLs to title-based /t/ URLs
           # - "should display correctly encoded URLs for recent pads": ep_weave replaces the index page and hides the recent pads list
-          pnpm run test-ui --project=chromium --grep-invert="the share link is the actual pad url|is an iframe with the correct url parameters and correct size|https://etherpad\.org/#foo|toolbar <li>/<a> wrappers are presentational|share link encodes special characters in pad name|should display correctly encoded URLs for recent pads"
+          # - "switches share links without changing access through either link": ep_weave rewrites pad URLs to title-based /t/ URLs
+          # - "Session Transfer Functionality" / "session transfer dialog copy": ep_weave replaces the index page, which has no settings dialog
+          pnpm run test-ui --project=chromium --grep-invert="the share link is the actual pad url|is an iframe with the correct url parameters and correct size|https://etherpad\.org/#foo|toolbar <li>/<a> wrappers are presentational|share link encodes special characters in pad name|should display correctly encoded URLs for recent pads|switches share links without changing access through either link|Session Transfer Functionality|session transfer dialog copy"
