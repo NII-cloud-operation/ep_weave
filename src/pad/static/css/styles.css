@@ -34,10 +34,15 @@
     padding: 0;
     height: 30vh;
     max-height: 80vh;
+    display: flex;
+    flex-direction: column;
 }
 
 #hashview {
-    height: 100%;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 .hashview-tabs {
@@ -124,6 +129,7 @@
 
 .hashview-collapsed {
     height: 1em !important;
+    overflow: hidden;
 }
 
 .hashview-collapsed .hashview-handle {
