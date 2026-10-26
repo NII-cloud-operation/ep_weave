@@ -158,6 +158,11 @@
     margin-left: 1em;
 }
 
+.hash-more {
+    align-self: center;
+    margin-left: 0.5em;
+}
+
 .hash-text {
     font-weight: bold;
 }

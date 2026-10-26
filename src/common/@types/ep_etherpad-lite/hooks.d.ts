@@ -18,6 +18,7 @@ declare module "ep_etherpad-lite/hooks" {
       toggleRollupKey?: string;
       notebookSearchEnabled?: boolean;
       jupyterBaseUrl?: string;
+      embeddingEnabled: boolean;
       title?: string;
       oldTitle?: string;
       titleChangedChecked?: any;
@@ -41,6 +42,23 @@ declare module "ep_etherpad-lite/hooks" {
     rep: {
       alltext: string;
     };
+  };
+
+  export type AceRep = {
+    selStart: [number, number] | null;
+    selEnd: [number, number] | null;
+    lines: {
+      length: () => number;
+      atIndex: (index: number) => {
+        text: string;
+        lineMarker: number;
+        lineNode: HTMLElement;
+      };
+    };
+  };
+
+  export type AceSelectionChangedContext = {
+    rep: AceRep;
   };
 
   export type PostAceInitContext = {
