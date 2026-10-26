@@ -135,7 +135,7 @@ export default function init() {
           );
         });
     },
-  });
+  }, false);
   
   $("#weave-index .weave-toolbar")
     .append($("<div>").text("ep_weave").addClass("weave-title"))

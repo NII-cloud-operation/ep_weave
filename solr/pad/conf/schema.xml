@@ -31,6 +31,8 @@
       <tokenizer class="solr.PatternTokenizerFactory" pattern="#[^#\s]+" group="0"/>
     </analyzer>
   </fieldType>
+  <!-- Unit vectors from the embedding service; vectorDimension must match its model -->
+  <fieldType name="knn_vector" class="solr.DenseVectorField" vectorDimension="768" similarityFunction="dot_product"/>
 
   <field name="_version_" type="long" indexed="true" stored="false"/>
   <field name="id" type="string" multiValued="false" indexed="true" required="true" stored="true"/>
@@ -42,4 +44,5 @@
   <field name="title" type="string" multiValued="false" indexed="true" required="true" stored="true"/>
   <field name="hash" type="hash" multiValued="false" indexed="true" required="true" stored="false"/>
   <field name="shorttext" type="text_ja" multiValued="false" indexed="false" required="true" stored="true"/>
+  <field name="embedding" type="knn_vector" indexed="true" required="false" stored="true"/>
 </schema>

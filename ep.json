@@ -8,6 +8,7 @@
         "preAuthorize": "ep_weave/lib/index",
         "clientVars": "ep_weave/lib/index",
         "eejsBlock_styles": "ep_weave/lib/client",
+        "eejsBlock_mySettings": "ep_weave/lib/client",
         "eejsBlock_indexWrapper": "ep_weave/lib/client",
         "eejsBlock_indexCustomScripts": "ep_weave/lib/client"
       },
@@ -15,6 +16,7 @@
         "postAceInit": "ep_weave/static/js/hashview",
         "postToolbarInit": "ep_weave/static/js/hashview",
         "aceEditEvent": "ep_weave/static/js/hashview",
+        "aceSelectionChanged": "ep_weave/static/js/hashview",
         "aceGetFilterStack": "ep_weave/static/js/hashview",
         "aceCreateDomLine": "ep_weave/static/js/hashview"
       }

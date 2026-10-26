@@ -69,6 +69,10 @@ jobs:
         working-directory: ./plugin
         run: |
           docker buildx build -o type=docker -t ep_weave/solr -f ./solr/Dockerfile .
+      - name: Build embedding service
+        working-directory: ./plugin
+        run: |
+          docker buildx build -o type=docker -t ep_weave/embedding ./embedding
       - name: Install plugin
         working-directory: ./etherpad-lite
         run: |
@@ -111,6 +115,17 @@ jobs:
             fi
             sleep 0.5
           done
+          docker run -d --name etherpad-embedding -p 8000:8000 ep_weave/embedding
+          counter=0
+          while ! curl -sSf http://localhost:8000/health; do
+            echo "Waiting for the embedding service ${counter}/${MAX_ATTEMPTS}"
+            counter=$((counter+1))
+            if [ "$counter" -ge "$MAX_ATTEMPTS" ]; then
+              echo "Embedding service did not respond"
+              exit 1
+            fi
+            sleep 5
+          done
           shopt -s globstar
           res=$(find ./plugin_packages -path "*/static/tests/backend/specs/*" 2>/dev/null | wc -l)
           if [ $res -eq 0 ]; then
@@ -120,9 +135,12 @@ jobs:
           fi
         env:
           LOGLEVEL: DEBUG
-      - name: Stop Solr
+      - name: Stop Solr and the embedding service
         if: always()
         run: |
           docker logs etherpad-solr
           docker stop etherpad-solr
           docker rm etherpad-solr
+          docker logs etherpad-embedding
+          docker stop etherpad-embedding
+          docker rm etherpad-embedding
