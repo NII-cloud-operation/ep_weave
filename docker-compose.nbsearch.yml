@@ -4,16 +4,19 @@ services:
   # nbsearch service provides:
   # - Solr with jupyter-cell and jupyter-notebook cores
   # - JupyterLab with test notebooks
-  # - MinIO for notebook storage (internal use only)
+  # - Garage for notebook storage (internal use only)
   # - Automatic indexing of test notebooks
   nbsearch:
     build: ./tests/nbsearch
     ports:
       - "8888:8888"  # JupyterLab (for viewing test notebooks)
       - "8984:8983"  # Solr (for ep_weave to query)
+    environment:
+      # Solr 9+ binds to 127.0.0.1 by default; ep_weave queries it from its own container
+      SOLR_HOST_BIND: 0.0.0.0
     volumes:
       - nbsearch_solr_data:/var/solr
-      - nbsearch_minio_data:/var/minio
+      - nbsearch_garage_data:/var/garage
     restart: always
 
   etherpad:
@@ -24,4 +27,4 @@ services:
 
 volumes:
   nbsearch_solr_data:
-  nbsearch_minio_data:
+  nbsearch_garage_data:

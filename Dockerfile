@@ -1,5 +1,6 @@
 ARG ETHERPAD_IMAGE_NAME="etherpad/etherpad"
 ARG ETHERPAD_IMAGE_TAG="3"
+ARG NODE_IMAGE="node:24-alpine"
 
 FROM mcr.microsoft.com/devcontainers/typescript-node:24 AS build-stage
 
@@ -8,9 +9,16 @@ RUN cd /app/ep_weave \
     && ls -la /app/ep_weave \
     && npm i --include dev && npm run build
 
+FROM ${NODE_IMAGE} AS node-runtime
+
 FROM ${ETHERPAD_IMAGE_NAME}:${ETHERPAD_IMAGE_TAG}
 
 USER root
+
+# The Etherpad image is built FROM node:24-alpine; take the current Node.js of that tag
+# so Node.js security releases do not have to wait for an Etherpad release.
+COPY --from=node-runtime /usr/local/bin/node /usr/local/bin/node
+COPY --from=node-runtime /usr/local/include/node /usr/local/include/node
 
 COPY --from=build-stage --chown=etherpad:etherpad /app/ep_weave /tmp/ep_weave
 
