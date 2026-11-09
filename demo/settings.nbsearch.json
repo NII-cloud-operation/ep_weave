@@ -100,6 +100,18 @@
  */
  {
   /*
+   * Etherpad polls static.etherpad.org and api.github.com for new releases and
+   * fetches its plugin catalog from static.etherpad.org; keep these off by default.
+   */
+  "privacy": {
+    "updateCheck": "${PRIVACY_UPDATE_CHECK:false}",
+    "pluginCatalog": "${PRIVACY_PLUGIN_CATALOG:false}"
+  },
+  "updates": {
+    "tier": "${UPDATES_TIER:off}"
+  },
+
+  /*
    * Name your instance!
    */
   "title": "${TITLE:EP\ud83e\uddf6\ud83e\udea1}", /* Ball of Yarn and Sewing needle */
