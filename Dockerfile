@@ -7,7 +7,7 @@ FROM mcr.microsoft.com/devcontainers/typescript-node:24 AS build-stage
 COPY . /app/ep_weave
 RUN cd /app/ep_weave \
     && ls -la /app/ep_weave \
-    && npm i --include dev && npm run build
+    && npm i --include dev && npm run build && npm prune --omit=dev
 
 FROM ${NODE_IMAGE} AS node-runtime
 
@@ -45,4 +45,4 @@ RUN bin/installDeps.sh && rm -rf ~/.npm && \
     fi
 
 # If you don't want to use the OpenID Connect plugin, you can comment out the following line.
-RUN pnpm run plugins i ep_openid_connect@3.0.7 ep_user_displayname ep_stable_authorid
+RUN pnpm run plugins i ep_openid_connect ep_user_displayname ep_stable_authorid

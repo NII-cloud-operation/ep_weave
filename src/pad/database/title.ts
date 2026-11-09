@@ -7,7 +7,6 @@ import { applyReplaceSet, ReplaceSet, getAText } from "./text";
 
 const api = require("ep_etherpad-lite/node/db/API");
 const db = require("ep_etherpad-lite/node/db/DB").db;
-const { decode, encode } = require("he");
 
 const MAX_PAGES = 10000;
 

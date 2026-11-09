@@ -5,7 +5,6 @@ import { getHashQuery } from "../static/js/hash";
 import { applyReplaceSet, ReplaceSet, getAText } from "./text";
 
 const api = require("ep_etherpad-lite/node/db/API");
-const { decode, encode } = require("he");
 
 export type HashUpdate = {
   oldTitle: string;
