@@ -17,8 +17,8 @@
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/jquery": "^4.0.1",
-    "@types/node": "^26.6.5",
-    "eslint": "^10.13.0",
+    "@types/node": "^26.6.6",
+    "eslint": "^10.14.0",
     "eslint-config-etherpad": "^5.0.2",
     "typescript": "^5.9.3"
   },
