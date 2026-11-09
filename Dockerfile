@@ -7,7 +7,7 @@ FROM mcr.microsoft.com/devcontainers/typescript-node:24 AS build-stage
 COPY . /app/ep_weave
 RUN cd /app/ep_weave \
     && ls -la /app/ep_weave \
-    && npm i --include dev && npm run build
+    && npm i --include dev && npm run build && npm prune --omit=dev
 
 FROM ${NODE_IMAGE} AS node-runtime
 
