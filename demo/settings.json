@@ -666,9 +666,6 @@
     "core": "pad",
     "padSerializer": "ep_weave/lib/serializer"
   },
-  "ep_webrtc": {
-    "enabled": false
-  },
   "ep_weave": {
     "initialPadsPath": "/pads.d",
     "toggleRollupKey": "Ctrl+Shift+R"
