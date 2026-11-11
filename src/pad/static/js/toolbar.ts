@@ -1,3 +1,4 @@
+import { SORT_BY_SIMILARITY } from "./result";
 import { getBasePath } from "./util";
 
 export type Callbacks = {
@@ -17,25 +18,32 @@ export function createCloseButton(onClose: () => void) {
   return close;
 }
 
-function createSortSelection(onSort: (sort: string) => void) {
+function createSortSelection(
+  onSort: (sort: string) => void,
+  similarity: boolean
+) {
+  const sortGroup = $("<optgroup></optgroup>")
+    .attr("label", "Sort by")
+    .append(
+      $("<option></option>")
+        .attr("value", "indexed desc")
+        .attr("selected", "selected")
+        .text("Date modified")
+    )
+    .append(
+      $("<option></option>")
+        .attr("value", "created desc")
+        .text("Date created")
+    )
+    .append($("<option></option>").attr("value", "title asc").text("Title"));
+  if (similarity) {
+    sortGroup.append(
+      $("<option></option>").attr("value", SORT_BY_SIMILARITY).text("Similarity")
+    );
+  }
   const sortSelection = $("<select></select>")
     .attr("id", "hashview-order")
-    .append(
-      $("<optgroup></optgroup>")
-        .attr("label", "Sort by")
-        .append(
-          $("<option></option>")
-            .attr("value", "indexed desc")
-            .attr("selected", "selected")
-            .text("Date modified")
-        )
-        .append(
-          $("<option></option>")
-            .attr("value", "created desc")
-            .text("Date created")
-        )
-        .append($("<option></option>").attr("value", "title asc").text("Title"))
-    );
+    .append(sortGroup);
   const sort = $("<div>")
     .addClass("hashview-sort")
     .append(
@@ -102,9 +110,12 @@ function createSearchBox(
     .append(createButton);
 }
 
-export function createToolbar(callbacks: Callbacks) {
+export function createToolbar(
+  callbacks: Callbacks,
+  similarity: boolean
+) {
   const searchBox = createSearchBox(callbacks.onSearch, callbacks.onCreate);
-  const sort = createSortSelection(callbacks.onSort);
+  const sort = createSortSelection(callbacks.onSort, similarity);
   const toolbar = $("<div></div>")
     .addClass("hashview-toolbar")
     .append(searchBox)

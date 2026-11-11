@@ -11,6 +11,8 @@ interface SolrQuery {
   start?: number;
   rows?: number;
   sort?: string;
+  fl?: string;
+  fq?: string;
 }
 
 interface SolrResponse {
@@ -46,22 +48,30 @@ export function createClient(config: SolrClientConfig) {
       if (query.sort) {
         params.append('sort', query.sort);
       }
+      if (query.fl) {
+        params.append('fl', query.fl);
+      }
+      if (query.fq) {
+        params.append('fq', query.fq);
+      }
 
       const headers = new Headers({
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
       });
 
       if (authHeader) {
         headers.append('Authorization', authHeader);
       }
 
-      const url = `${solrUrl}/select?${params}`;
+      // POST: a similarity query carries the whole query vector
+      const url = `${solrUrl}/select`;
       console.debug('[ep_weave/solr-client] Solr request URL:', url);
       console.debug('[ep_weave/solr-client] Solr query:', query);
 
       const response = await fetch(url, {
-        method: 'GET',
+        method: 'POST',
         headers,
+        body: params.toString(),
       });
 
       if (!response.ok) {

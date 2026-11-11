@@ -1,0 +1,8 @@
+fastapi>=0.115,<1
+uvicorn>=0.30,<1
+sentence-transformers>=6.1,<7
+transformers>=5.19,<6
+torch>=2.14,<3
+torchvision>=0.29,<1
+numpy>=2,<3
+pillow>=11,<13

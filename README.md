@@ -56,6 +56,65 @@ To configure notebook search, add the following settings:
 - `password`: Basic auth password for Solr (optional)
 - `jupyterBaseUrl`: Jupyter base URL for generating links (optional)
 
+## Similarity Sort
+
+The related pages in the rollup can be sorted by the similarity of their
+content to the current pad. Pads are embedded with
+[EmbeddingGemma 2](https://huggingface.co/google/embeddinggemma-2) by the
+service in the `embedding` directory, and the vectors are stored in the pad's
+Solr document like the rest of the index. The feature is disabled by default.
+To enable it, run the service and add the following settings:
+
+```json
+"ep_weave": {
+  "embedding": {
+    "enabled": true,
+    "url": "http://embedding:8000"
+  }
+}
+```
+
+- `enabled`: Set to `true` to enable the similarity features (default: `false`)
+- `url`: Base URL of the embedding service (required when `enabled` is `true`)
+
+With docker compose, `docker-compose.embedding.yml` adds the service and a
+settings file with this entry:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.embedding.yml up -d
+```
+
+While disabled, the sort option and the suggestions are not shown, the
+`/ep_weave/related` and `/ep_weave/similar` endpoints are not served, and pads
+are indexed as before. While enabled, every pad update calls the service while
+indexing, so the indexing throughput is bound by the inference speed of the
+service; give it
+more CPU, or build it with a CUDA wheel index (`--build-arg
+TORCH_INDEX_URL=https://download.pytorch.org/whl/cu128`) and a GPU runtime.
+The model is baked into the image, so the service needs no network access at
+runtime. If the service is unreachable, indexing of the edited pad fails and
+its index entry stays as it was until a later edit succeeds.
+
+While enabled, the rollup also suggests pages similar to the paragraph at
+the cursor, or to the selected text when there is a selection; a range without
+text is represented by its first image. The paragraph is embedded in the
+browser with WebGPU, and only the vector is sent to the server. On first use the browser downloads
+[Transformers.js](https://huggingface.co/docs/transformers.js) from jsDelivr
+and the 8-bit ONNX model (about 520 MB) from Hugging Face; browsers without
+WebGPU do not show the suggestions. Only pads that have a vector are
+suggested. Each user can turn the suggestions off with "Suggest similar
+pages" in the pad settings; the choice is kept in the browser like the other
+pad settings.
+
+The pad core schema gained the `embedding` field with this feature. Before
+enabling it on an existing deployment, rebuild the Solr index as
+described in
+[Troubleshooting](#search-does-not-work--the-top-page-shows-no-pads); with
+the old schema every pad update fails with an unknown field error. Pads
+indexed while it was disabled have no vector and are listed after the
+others in the similarity sort until they are edited. A self-hosted Solr must
+be 9.6 or later for the two-argument form of the `vectorSimilarity` function.
+
 # Troubleshooting
 
 ## Search does not work / the top page shows no pads

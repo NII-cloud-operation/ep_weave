@@ -8,6 +8,13 @@ import {
 import { logPrefix } from "./util/log";
 import { updateTitles } from "./database/title";
 import { escapeForText } from "./static/js/result";
+import { createClient } from "./solr-client";
+import {
+  configure as configureEmbedding,
+  DIMENSION,
+  EmbeddingSettings,
+  isEnabled as isEmbeddingEnabled,
+} from "./embedding";
 
 const absolutePaths = require("ep_etherpad-lite/node/utils/AbsolutePaths");
 const argv = require("ep_etherpad-lite/node/utils/Cli").argv;
@@ -32,6 +39,7 @@ type PluginSettings = {
     password?: string;
     jupyterBaseUrl?: string;
   };
+  embedding?: EmbeddingSettings;
 };
 
 async function getPadIdsByTitle(searchEngine: SearchEngine, title: string) {
@@ -83,6 +91,7 @@ async function getAuthorForUser(user: any) {
 exports.loadSettings = (hookName: string, context: { settings: any }) => {
   epWeaveSettings = (context.settings.ep_weave || {}) as PluginSettings;
   epSearchSettings = context.settings.ep_search || {};
+  configureEmbedding(epWeaveSettings.embedding);
 };
 
 exports.clientVars = (
@@ -98,6 +107,7 @@ exports.clientVars = (
       toggleRollupKey: epWeaveSettings.toggleRollupKey || "ctrl+shift+r",
       notebookSearchEnabled: !!epWeaveSettings.notebookSearch,
       jupyterBaseUrl: epWeaveSettings.notebookSearch?.jupyterBaseUrl,
+      embeddingEnabled: isEmbeddingEnabled(),
     },
   });
 };
@@ -337,6 +347,89 @@ function performRegisterRoute(
   };
 
   app.get("/ep_weave/notebook-search", notebookSearchHandler);
+
+  const asyncRoute =
+    (handler: (req: Request, res: Response) => Promise<void>) =>
+    (req: Request, res: Response) => {
+      handler(req, res).catch((err) => {
+        console.error(
+          logPrefix,
+          "Error occurred",
+          err.stack || err.message || String(err)
+        );
+        res.status(500).send({
+          error: err.toString(),
+        });
+      });
+    };
+  // Vector queries go to Solr directly: they are too long for ep_search's GET client.
+  const createPadClient = () => {
+    const { host, port, core, username, password } = epSearchPluginSettings;
+    const client = createClient({ baseUrl: `http://${host}:${port}`, core });
+    if (username && password) {
+      client.basicAuth(username, password);
+    }
+    return client;
+  };
+
+  // Related pads ordered by vector similarity to the given pad.
+  const relatedHandler = async (req: Request, res: Response) => {
+    const { query, pad } = req.query;
+    if (typeof query !== "string" || typeof pad !== "string") {
+      res.status(400).send({
+        error: "Bad Request",
+      });
+      return;
+    }
+    const start = parseInt(req.query.start as string) || 0;
+    const rows = parseInt(req.query.rows as string) || 10;
+    const client = createPadClient();
+    const reference = await client.search({
+      q: `id:${escapeForText(pad)}`,
+      fl: "embedding",
+      rows: 1,
+    });
+    const [referenceDoc] = reference.response.docs;
+    const embedding: number[] | undefined = referenceDoc && referenceDoc.embedding;
+    // The similarity function scores every pad and the query filters; pads
+    // without a vector score 0 and therefore follow every pad with one.
+    // Sorting by the function directly fails in Solr 9.11: its values lack doubleVal.
+    const result = embedding
+      ? await client.search({
+          q: `{!func}vectorSimilarity(embedding,[${embedding.join(",")}])`,
+          fq: query,
+          start,
+          rows,
+          sort: "score desc,indexed desc",
+        })
+      : await client.search({ q: query, start, rows, sort: "indexed desc" });
+    res.send(JSON.stringify({ ...result.response, similarity: !!embedding }));
+  };
+
+  // Pads nearest to a vector, which the browser computes from the user's selection.
+  const similarHandler = async (req: Request, res: Response) => {
+    const { vector } = req.body;
+    if (
+      !Array.isArray(vector) ||
+      vector.length !== DIMENSION ||
+      !vector.every(Number.isFinite)
+    ) {
+      res.status(400).send({
+        error: `vector must be an array of ${DIMENSION} finite numbers`,
+      });
+      return;
+    }
+    const rows = parseInt(req.query.rows as string) || 10;
+    const result = await createPadClient().search({
+      q: `{!knn f=embedding topK=${rows}}[${vector.join(",")}]`,
+      rows,
+    });
+    res.send(JSON.stringify(result.response));
+  };
+  if (isEmbeddingEnabled()) {
+    app.get("/ep_weave/related", asyncRoute(relatedHandler));
+    app.post("/ep_weave/similar", asyncRoute(similarHandler));
+  }
   // Use regex directly for version compatibility
   app.get(/^\/t\/(.*)/, (req: Request, res: Response) => {
     const { user } = (req as any).session;

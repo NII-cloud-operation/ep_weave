@@ -1,0 +1,21 @@
+version: '3'
+
+services:
+  # Embedding service for the similarity sort of related pages.
+  # The model is baked into the image; the first build downloads it.
+  embedding:
+    build: ./embedding
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+    restart: always
+
+  etherpad:
+    volumes:
+      - ./demo/settings.embedding.json:/opt/etherpad-lite/settings.json:ro
+    depends_on:
+      embedding:
+        condition: service_healthy
