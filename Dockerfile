@@ -28,7 +28,7 @@ RUN git clone -b feature/search-engine https://github.com/NII-cloud-operation/ep
     && ls -la /tmp/ep_search
 
 # ep_webrtc
-ARG EP_WEBRTC_VERSION="v2026.11.0"
+ARG EP_WEBRTC_VERSION="v2026.11.1"
 RUN git clone -b ${EP_WEBRTC_VERSION} https://github.com/NII-cloud-operation/ep_webrtc.git /tmp/ep_webrtc \
     && chown -R etherpad:etherpad /tmp/ep_webrtc \
     && ls -la /tmp/ep_webrtc
